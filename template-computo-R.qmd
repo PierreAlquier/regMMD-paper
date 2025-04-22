@@ -229,7 +229,7 @@ for (i in 1:4) results[2,i] = sd(err[,i])
 colnames(results) = c('MLE','MMD (Gaussian kernel)','MMD (Laplace kernel)','Median')
 rownames(results) = c('MAE','sdAE')
 final = as.table(results)
-knitr::kable(final)
+knitr::kable(final,caption="Estimation of the mean in the uncontaminated case")
 ```
 In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead.
 ```{r r-code9, echo=TRUE}
@@ -255,32 +255,12 @@ for (i in 1:4) results[2,i] = sd(err[,i])
 colnames(results) = c('MLE','MMD (Gaussian kernel)','MMD (Laplace kernel)','Median')
 rownames(results) = c('MAE','sdAE')
 final = as.table(results)
-knitr::kable(final)
+knitr::kable(final,caption="Estimation of the mean in the contaminated case")
 ```
 
-The results are as expected: under no contamination, the MLE is known to be efficient and is therefore the best estimator. On the other hand, the MLE (i.e.~the empirical mean) is known to be very sensitive to outliers. In contrast,  the    MMD estimators and the median are robust estimators of $\theta$. We refer the reader to~\cite{briol2019statistical,cherief2019finite} for more discussions and experiments on the robustness   MMD estimators.
+The results are as expected: under no contamination, the MLE is known to be efficient and is therefore the best estimator. On the other hand, the MLE (i.e.~the empirical mean) is known to be very sensitive to outliers. In contrast,  the    MMD estimators and the median are robust estimators of $\theta$. We refer the reader to [@briol2019statistical;@cherief2019finite] for more discussions and experiments on the robustness   MMD estimators.
  
- Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available:
- \begin{verbatim}
-R> estim <- mmd_est(x,model="Gaussian.scale",par1=0)
-R> summary(estim)
-
-======================== Summary ========================
-Model:               Gaussian.scale
----------------------------------------------------------
-Algorithm:           SGD
-Kernel:              Gaussian
-Bandwidth:           1.00146068635693
----------------------------------------------------------
-Parameters:                   
- 
-par1: mean -- fixed by user: 0
- 
-par2: standard deviation -- initialized at 0.9173
-      estimated value: 1.0808 
-========================================================= 
-\end{verbatim}
-We repeat similar experiments as above in this case. We let $N$ and $n$ be as above and sample  the uncontaminated   observations from the $\mathcal{N}(0,1)$ distributions. We them compare the MLE to the MMD with Gaussian and Laplace kernel both in the uncontaminated case  and under Cauchy contamination for two observations. The results are reported in Figure~\ref{table2}. The conclusions are completely similar to the ones obtained in the Gaussian location experiments.
+ Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available. We repeat similar experiments as above in this model. We let $N$ and $n$ be as above and sample  the uncontaminated   observations from the $\mathcal{N}(0,1)$ distributions. We them compare the MLE to the MMD with Gaussian and Laplace kernel both in the uncontaminated case  and under Cauchy contamination for two observations. The conclusions are completely similar to the ones obtained in the Gaussian location experiments.
 
 We finally provide an example of estimation of both parameters in Gaussian model.
  \begin{verbatim}
