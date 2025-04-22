@@ -46,8 +46,7 @@ $$
 
 Additional non-asymptotic results can be found in [@briol2019statistical;@cherief2019finite]. In particular, Theorem 3.1 of [@cherief2019finite] also covers non independent observations (time series). An asymptotic study of $\hat{\theta}$, including conditions for asymptotic normality, can be found in [@briol2019statistical]. All these works provide strong theoretical evidence that $\hat{\theta}$ is very robust to random and adversarial contamination of the data, and this is supported by empirical evidence.
 
-## Regression
-
+## Regression {#sec-reg}
 
 Let us now consider a regression setting: we observe $(X_1,Y_1),\dots,(X_n,Y_n)$ in $\mathcal{X}\times \mathcal{Y}$ and we want to estimate the conditional distribution $P^0_{Y|X=x}$ of $Y$ given $X=x$ for any $x$. %A direct application of the method in the previous section to the random variables $(X_1,Y_1),\dots, (X_n,Y_n)$ would   lead to the estimation of the joint distribution of the pair $(X,Y)$, which is not the objective of regression models.
 To this end we consider a statistical model $(P_\beta,\beta\in\mathcal{B})$ and model the conditional distribution of $Y$ given $X=x$ by $(P_{\beta(x,\theta)},\theta\in\Theta)$ where $\beta(\cdot,\cdot)$ is a specified function $\mathcal{X}\times\Theta \rightarrow \mathcal{B}$. The first estimator proposed by [@alquier2024universal] is:
@@ -105,7 +104,7 @@ we simply enforce the optimization algorithm that serves at computing the estima
 estim = mmd_est(x,model="Gaussian.loc",par2=1)
 summary(estim)
 ```
-will estimate $\theta$ in the model $\mathcal{N}(\theta,1)$. If we provide a value for `par1` then the optimization algorithm used to compute $\hat{\theta}$ will use $\theta_0=$`par1` as starting value. Finally, In the `Gaussian.scale` model only the scale parameter (standard deviation) is estimated. That is, to estimate  $\theta=$`par2` in e.g. the $\mathcal{N}(4,\theta^2)$ distribution we can use
+will estimate $\theta$ in the model $\mathcal{N}(\theta,1)$. If we provide a value for `par1` then the optimization algorithm used to compute $\hat{\theta}$ will use $\theta_0=$`par1` as starting value. Finally, In the `Gaussian.scale` model only the scale parameter (standard deviation) is estimated. That is, to estimate  $\theta=$`par2` in e.g. the $\mathcal{N}(2,\theta^2)$ distribution we can use
 ```{r r-code5, echo=TRUE}
 estim = mmd_est(x,model="Gaussian.scale",par1=2)
 summary(estim)
@@ -113,18 +112,514 @@ summary(estim)
 
 ## Overview of the function `mmd_reg`
 
+The function `mmd_reg` is used for regression models (@sec-reg)  and requires to specify two arguments, namely the output vector  `y` of size $n$ and the $n\times q$ input matrix `X`.  By default, the functions performs linear regression with Gaussian error noise (with unknown variance) and the regression model to be used can be changed through the option `model` of `mmd_reg` (see @sec-models for the list of available models). In addition, by default, if the input matrix  `X` contains no column whose entries are all equal then an intercept is added to the model, that is, a column of 1's   is added to `X`. This default setting can be disabled by setting the option `intercept` of `mmd_reg` to `FALSE`.
+
+All regression models implemented in the package have a  parameter   {\tt par1}, and some of them have an additional scalar parameter {\tt par2}. If a model has {\tt par1} as unique   parameter  then the parameter to be estimated is $\theta={\tt par1}$ and  the conditional distribution of $Y$ given $X=x$ is modelled using a model of the form $(P_{\beta(x^\top\theta)},\theta\in\mathbb{R}^k)$, with    $k$ the size of $x$. For instance, for Poisson regression the distribution $P_{\beta(x^\top\theta)}$ is the Poisson distribution with mean $\exp(x^\top\theta)$. By contrast, some  models  have an additional parameter {\tt par2} that also needs to be estimated from the data, so that  $\theta=({\tt par1},{\tt par2})$. For these models  the conditional distribution of $Y$ given $X=x$ is modelled using a model of the form $(P_{\beta(x^\top\gamma,\psi)},\theta=(\gamma,\psi)\in\mathbb{R}^{k+1})$. For instance, for the Gaussian linear regression model with unknown variance   $P_{\beta(x^\top\gamma,\psi)}=\mathcal{N}(x^\top\gamma,\psi^2)$. Finally, some  models  have an additional parameter {\tt par2} whose value needs to be specified by the user. For these models     $\theta= {\tt par1}$ and  the conditional distribution of $Y$ given $X=x$ is modelled using a model of the form $(P_{\beta(x^\top\theta,{\tt par2})},\theta\in\mathbb{R}^{k})$. For instance, for the Gaussian linear regression model with  known variance,  $P_{\beta(x^\top\theta,{\tt par2})}=\mathcal{N}(x^\top\theta,{\tt par2}^2)$. Remark that for all models implemented in the package {\tt par1} is   therefore the vector of regression coefficients. As with the function {\tt mmd\_est}, if a value  for a parameter that needs to be estimated from the data is provided then it   is used to initialize  the optimization algorithm that serves at computing the estimator, otherwise  an initialization by default is used. It is important to note that the number $k$ of regression coefficients of a model is either $q$ (the    number of columns of the input matrix {\tt X}) or $q+1$  if an intercept has been added by {\tt mmd\_reg}. In the latter case, if we want to  provide a value for {\tt par1} then it must be vector of length $q$.
+ 
+
+For example, there are two linear regression model with Gaussian noise: {\tt linearGaussian} which assumes that noise variance is unknown and {\tt linearGaussian.loc} which assumes that noise variance is unknown. By default, the former model is used by {\tt mmd\_reg}, and thus linear regression can be simply performed using:
+\begin{verbatim}
+R> estim <- mmd_reg(y,X)
+\end{verbatim}
+By default  {\tt mmd\_reg} uses the MMD estimator $\tilde{\theta} _{\mathrm{reg}}$, which we recall is cheaper to compute that the alternative MMD estimator $\hat{\theta}_{\mathrm{reg}}$.
+
 ## Kernels and bandwidth parameters
+
+For parametric models (Section \ref{sec:Model_fit}) the MMD estimator of $\theta$ is computed with a kernel $k(x,x')$ of the form $k(x,x')=K(\|x-x'\|/\gamma)$  for some  bandwidth parameter $\gamma>0$ and some function $K:[0,\infty)\rightarrow [0,\infty)$. The choice of $K$ and $\gamma$ can be specified through the option   {\tt kernel} and \texttt{bdwth} of the function \texttt{mmd\_est}, respectively.  By default, the median heuristic is used to choose $\gamma$ (the median heuristic was used successfully in many applications of MMD, for example~\cite{gretton2012kernel}, see also~\cite{garreau2017large} for a theoretical analysis). The following three options are available for the function  $K$:
+\begin{itemize}
+ \item \texttt{"Gaussian"}: $ K(u) = \exp(-u^2) $,
+ \item \texttt{"Laplace"}: $K(u)=\exp(-u)$,
+ \item \texttt{"Gaussian"}: $K(u)=1/(2+u^2)$.
+\end{itemize} 
+
+Similarly, for regression models (Section \ref{sec:reg}), the MMD estimators are computed with $k_X(x,x')=K_X(\|x-x'\|/\gamma_X)$ and $k_Y(y,y')=K_Y(\|y-y'\|/\gamma_Y)$  for some bandwidth parameters $\gamma_X\geq 0$ and $\gamma_Y>0$ and   functions $K_X, K_Y:[0,\infty)\rightarrow [0,\infty)$. The choice of $K_X$, $K_Y$, and $\gamma_X$ and $\gamma_Y$ can be specified through the option   {\tt kernel.x}, {\tt kernel.y},  \texttt{bdwth.x}   and \texttt{bdwth.y} of the function \texttt{mmd\_reg}, respectively. The available choices for $K_X$ and $K_Y$ are the same as for $K$, and by default  the median heuristic is used to select $\gamma_Y$. By default,  \texttt{bdwth.x=0} and thus  it is  the  estimator $\tilde{\theta}_{\mathrm{reg}}$ that is used by {\tt mmd\_reg}. The alternative estimator $\hat{\theta}_{\mathrm{reg}}$ can be computed either by providing a positive value for \texttt{bdwth.x} or by setting \texttt{bdwth.x="auto"}, in which case a rescaled version of the  median heuristic is used to choose a positive value for $\gamma_X$.
 
 ## Optimization methods
 
+Depending on the model, the  package {\sc \textbf{regMMD}} uses either gradient descent ({\tt GD})  or stochastic gradient descent ({\tt SGD}) to compute the estimators. 
+
+More precisely, for parametric estimation it is proven in Section 5 of~\cite{cherief2019finite} that the gradient of $\mathbb{D}^2(P_\theta,\hat{P}_n)$ with respect to $\theta$ is given by
+\begin{equation}
+\label{formula:gradient}
+  \nabla_\theta \mathbb{D}^2(P_\theta,\hat{P}_n)
+ =
+ 2 \mathbb{E}_{X,X'\sim P_\theta} \left[ \left( k(X,X') - \frac{1}{n}\sum_{i=1}^n k(X_i,X) \right) \nabla_\theta[\log p_\theta(X) ]\right]
+\end{equation}
+under suitable assumptions on $P_\theta$, including the existence of a density $p_\theta(X)$ and its differentiability. In some models  there is an explicit formula for the expectation in~\eqref{formula:gradient}. This is for instance the case  for the Gaussian mean model, and for such models  a gradient descent algorithm is used to compute the MMD estimator. For models where we cannot compute explicitly the  expectation in \eqref{formula:gradient}  it is possible to compute an unbiased estimate of the gradient by sampling from $P_\theta$. In this scenario  the MMD estimator is computed  using  AdaGrad \cite{Duchi}, and adaptive step-size SGD algorithm. Finally, in very specific models, $\mathbb{D}(P_\theta,\hat{P}_n)$ can be evaluated explicitly in which  case  we can perform exact optimization ({\tt exact}). This is for example  the case when $P_\theta$ is the (discrete) uniform distribution on $\{1,2,\dots,\theta\}$.
+
+
+
+In {\tt mmd\_est},  for each model all the available methods for computing the estimator are implemented. The method used by default is chosen according to the ranking: {\tt exact}$>${\tt GD}$>${\tt SGD}. We can enforce another method with the {\tt method} option. For instance,
+\begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian")
+\end{verbatim}
+is equivalent to
+\begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian",method="GD")
+\end{verbatim}
+and we can enforce the use of SGD with
+\begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian",method="SGD")
+\end{verbatim}
+
+
+For regression models, formulas similar to the one given in \eqref{formula:gradient} for the gradient of the criteria defining the estimators   $\hat{\theta}_{ \mathrm{reg}}$ and $\tilde{\theta}_{ \mathrm{reg}}$ are provided in Section S1 of the supplement of~\cite{alquier2024universal}. For   the two estimators, this gradient can be computed explicitly  for all  linear regression models when  {\tt kernel.y="Gaussian"}  and for the logistic regression model.
+
+For the  estimator $\tilde{\theta}_{\mathrm{reg}}$, and as for parametric estimation, gradient descent is used when the gradient of the objective function can be computed explicitly,   and otherwise the optimization is performed using Adagrad.  In {\tt mmd\_reg} gradient descent is implemented using backtracking line search to select the step-size to use at each iteration, and a stopping rule is implemented to stop the optimization earlier when possible.
+
+The computation  of $\hat{\theta}_{\mathrm{reg}}$ is more delicate. Indeed, the objective function defining this estimator is the sum of $n^2$ terms (see Section \ref{sec:reg}), implying that  minimizing this function using     gradient descent or SGD leads to algorithms for computing the estimator that require $\mathcal{O}(n^2)$ operations per iteration. In the package, to reduce the cost per iteration we implement the strategy proposed in Section S1 of the supplement of~\cite{alquier2024universal}. Importantly, with this strategy the optimization is performed using an unbiased estimate of the gradient of the objective function, even when the gradient  of the $n^2$ terms of objective function can be computed explicitly. It is  however possible to use the explicit formula for these gradients   to reduce the variance of the noisy gradient, which we do   when possible. As for the computation of $\tilde{\theta}_{\mathrm{reg}}$ a stopping rule is implemented to stop the optimization earlier when possible. With this package it is feasible to compute $\hat{\theta}_{\mathrm{reg}}$ in a reasonable amount of time for dataset containing up to a few thousands data points (up-to $n\approx 5\,000$ observations, say). 
+
+
+Finally, we stress that, from a computational point of view,    MMD estimation in regression models  is a much more challenging task than in parametric models for at least two reasons. Firstly, while in the latter task the dimension of the parameter of interest $\theta$ is at most two for the models implemented in this package (see below), in regression the dimension of $\theta$ can be much larger, depending on the number of explanatory variables. Secondly, the objective functions to minimize for regression models are ``more non-linear''. When estimating a regression model it is therefore a good practice to verify that the optimization of the objective function has converged. This can be done by inspecting the sequence of $\theta$ values computed by the optimization algorithm, accessible from the  object \texttt{trace} of \texttt{mmd\_reg}.
+
 ## Available models {#sec-models}
+
+
+\textbf{List of univariate models in {\tt mmd\_est}:}
+\begin{itemize}
+ \item Gaussian $\mathcal{N}(m,\sigma^2)$: {\tt Gaussian} (estimation of $m$ and $\sigma$), {\tt Gaussian.loc} (estimation of $m$) and {\tt Gaussian.scale} (estimation of $\sigma$),
+ \item Cauchy: {\tt Cauchy} (estimation of the location parameter),
+ \item Pareto: {\tt Pareto} (estimation of the exponent),
+ \item exponential $\mathcal{E}(\lambda)$: {\tt exponential},
+ \item gamma $Gamma(a,b)$: {\tt gamma} (estimation of $a$ and $b$), {\tt gamma.shape} (estimation of $a$) and {\tt gamma.rate} (estimation of $b$),
+ \item continuous uniform: {\tt continuous.uniform.loc} (estimation of $m$ in $\mathcal{U}[m-\frac{L}{2},m+\frac{L}{2}]$, where $L$ is fixed by the user), {\tt continuous.uniform.upper} (estimation of $b$ in $\mathcal{U}[a,b]$) and {\tt continuous.uniform.lower.upper} (estimation of both $a$ and $b$ in $\mathcal{U}[a,b]$),
+ \item Dirac $\delta_a$: {\tt Dirac} (estimation of $a$; while this might sound uninteresting, this can be used to define a ``model-free'' robust location parameter),
+ \item discrete uniform $\mathcal{U}(\{1,2,\dots,N\})$: {\tt discrete.uniform} (estimation of $N$),
+ \item binomial $Bin(N,p)$: {\tt binomial} (estimation of $N$ and $p$), {\tt binomial.size} (estimation of $N$) and {\tt binomial.prob} (estimation of $p$),
+ \item geometric $\mathcal{G}(p)$: {\tt geometric},
+ \item Poisson $\mathcal{P}(\lambda)$: {\tt Poisson}.
+\end{itemize}
+
+\textbf{List of multivariate models in {\tt mmd\_est}:}
+\begin{itemize}
+ \item multivariate Gaussian $\mathcal{N}(\mu,U U^T)$: {\tt multidim.Gaussian} (estimation of $\mu$ and $U$), {\tt multidim.Gaussian.loc} (estimation of $\mu$ while $U=\sigma I$ for a fixed $\sigma>0$) and {\tt multidim.Gaussian.scale} (estimation of $U$ while $\mu$ is fixed),
+ \item Dirac mass $\delta_{a}$: {\tt multidim.Dirac}.
+\end{itemize}
+
+\textbf{List of regression models in {\tt mmd\_reg}:}
+\begin{itemize}
+ \item linear regression models with Gaussian noise: {\tt linearGaussian} (unknown noise variance) and {\tt linearGaussian.loc} (known noise variance),
+ \item exponential regression: {\tt exponential},
+ \item gamma regression: {\tt gamma}, or {\tt gamma.loc} when the precision parameter is known,
+ \item beta regression: {\tt beta}, or {\tt beta.loc} when the precision parameter is known,
+ \item logistic regression: {\tt logistic},
+ \item Poisson regression: {\tt poisson}.
+\end{itemize}
+
+## Output
+
+The output of both {\tt mmd\_reg} and {\tt mmd\_est} is a list that contains error messages (if any), the estimated parameters (if no error prevented their computations) and various information on the model and the estimators. The estimated values can be recovered respectively by {\tt estim\$estimators} (with {\tt mmd\_est}) and {\tt estim\$coefficients}  (with {\tt mmd\_reg}). A {\tt summary} function is available in both cases:
+\begin{verbatim}
+R> estim <- mmd_reg(y, X)
+R> summary(estim)
+\end{verbatim}
+Examples of such summaries are provided and discussed in the next section.
 
 # Detailed examples {#sec-examples}
 
 ## Toy example: robust estimation in the univariate Gaussian model
 
+
+We start with a very simple illustration on synthetic data. We choose one of the simplest model, namely, estimation of the mean of a univariate Gaussian random variable. The statistical model is $\mathcal{N}(\theta,1)$, which is the \texttt{Gaussian.loc} model in the package. When the sample is stored in a vector \texttt{x}, the code for the estimation with default settings is:
+\begin{verbatim}
+R> require("regMMD")
+R> estim <- mmd_est(x,model="Gaussian.loc",par2=1)
+R> summary(estim)
+======================== Summary ========================
+Model:               Gaussian.loc
+---------------------------------------------------------
+Algorithm:           GD
+Kernel:              Gaussian
+Bandwidth:           0.976611092935025
+---------------------------------------------------------
+Parameters:                   
+ 
+par1: mean -- initialized at 0.0418
+      estimated value: 0.0221 
+ 
+par2: standard deviation -- fixed by user: 1
+========================================================= 
+\end{verbatim}
+Note the default settings for the kernel (Gaussian), the bandwidth (computed by median heuristic) and the initialization of the gradient descent on $\theta$ (taken as the median of the data). The user can fix this initialization instead (observe this has no effect on the convergence in this case):
+\begin{verbatim}
+R> estim <- mmd_est(X,model="Gaussian.loc",par1=2,par2=1)
+R> summary(estim)
+======================== Summary ========================
+Model:               Gaussian.loc
+---------------------------------------------------------
+Algorithm:           GD
+Kernel:              Gaussian
+Bandwidth:           0.976611092935025
+---------------------------------------------------------
+Parameters:                   
+ 
+par1: mean -- initialized at 2
+      estimated value: 0.0221 
+ 
+par2: standard deviation -- fixed by user: 1
+=========================================================
+\end{verbatim}
+The user can also impose a different bandwidth and kernel, which will result in a different estimator.
+\begin{verbatim}
+R> estim <- mmd_est(X,model="Gaussian.loc",par2=1,bdwth=0.6,kernel="Laplace")
+R> summary(estim)
+======================== Summary ========================
+Model:               Gaussian.loc
+---------------------------------------------------------
+Algorithm:           GD
+Kernel:              Laplace
+Bandwidth:           0.6
+---------------------------------------------------------
+Parameters:                   
+ 
+par1: mean -- initialized at 0.0418
+      estimated value: 0.0243 
+ 
+par2: standard deviation -- fixed by user: 1
+========================================================= 
+\end{verbatim}
+We end up the discussion on the Gaussian mean example by a toy experiment: we replicate $N=200$ times the simulation of $n=100$ i.i.d.~random variables $\mathcal{N}(-2,1)$ and compare the maximum likelihood estimator (MLE), equal to  the empirical mean, the median, and   the MMD estimator  with a Gaussian and with a Laplace kernel, using in both cases the median heuristic to choose the bandwidth parameter. In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead. The mean absolute error (MAE) of each estimator over all experiments are reported in Figure~\ref{table1}. The results are as expected: under no contamination, the MLE is known to be efficient and is therefore the best estimator. On the other hand, the MLE (i.e.~the empirical mean) is known to be very sensitive to outliers. In contrast,  the    MMD estimators and the median are robust estimators of $\theta$. We refer the reader to~\cite{briol2019statistical,cherief2019finite} for more discussions and experiments on the robustness   MMD estimators.
+ 
+ Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available:
+ \begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian.scale",par1=0)
+R> summary(estim)
+
+======================== Summary ========================
+Model:               Gaussian.scale
+---------------------------------------------------------
+Algorithm:           SGD
+Kernel:              Gaussian
+Bandwidth:           1.00146068635693
+---------------------------------------------------------
+Parameters:                   
+ 
+par1: mean -- fixed by user: 0
+ 
+par2: standard deviation -- initialized at 0.9173
+      estimated value: 1.0808 
+========================================================= 
+\end{verbatim}
+We repeat similar experiments as above in this case. We let $N$ and $n$ be as above and sample  the uncontaminated   observations from the $\mathcal{N}(0,1)$ distributions. We them compare the MLE to the MMD with Gaussian and Laplace kernel both in the uncontaminated case  and under Cauchy contamination for two observations. The results are reported in Figure~\ref{table2}. The conclusions are completely similar to the ones obtained in the Gaussian location experiments.
+
+We finally provide an example of estimation of both parameters in Gaussian model.
+ \begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian")
+R> summary(estim)
+
+======================== Summary ========================
+Model:               Gaussian
+---------------------------------------------------------
+Algorithm:           SGD
+Kernel:              Gaussian
+Bandwidth:           1.00146068635693
+---------------------------------------------------------
+Parameters:                   
+ 
+par1: mean -- initialized at 0.1426
+      estimated value: 0.1101 
+ 
+par2: standard deviation -- initialized at 0.9288
+      estimated value: 1.0768 
+========================================================= 
+\end{verbatim}
+
+ \begin{figure}
+ \begin{center}
+  \begin{tabular}{|c||c|c|c|c|}
+   \hline
+   & MLE & MMD (Gaussian kernel) & MMD (Laplace kernel) & median \\
+   \hline
+   no contamination &  \textcolor{blue}{{\bf 0.0816}} & {\bf 0.0912} & {\bf 0.0895} & \textcolor{red}{{\bf 0.110}} \\
+                    & \textcolor{blue}{(0.062)} & (0.072) & (0.078) & \textcolor{red}{(0.079)} \\
+   \hline 
+   contamination & \textcolor{red}{{\bf 0.1175}} & {\bf 0.0885} & \textcolor{blue}{{\bf 0.0813}} & {\bf 0.0894} \\
+       by Cauchy           & \textcolor{red}{(0.171)} & (0.068) & \textcolor{blue}{(0.067)} & (0.075)   \\        
+   \hline
+  \end{tabular}
+  \end{center}
+   \caption{Mean Absolute Error ({\bf MAE}) for various estimators in the (univariate) Gaussian mean experiments (between parenthesis: the standard deviation of the absolute error over all experiments). The best MAE performance is highlighted in \textcolor{blue}{blue} and the worst one in \textcolor{red}{red}.}
+ \label{table1}
+ \end{figure}
+ \begin{figure}
+ \begin{center}
+  \begin{tabular}{|c||c|c|c|}
+   \hline
+   & MLE & MMD (Gaussian kernel) & MMD (Laplace kernel)  \\
+   \hline
+   no contamination & \textcolor{blue}{{\bf 0.0533}} & \textcolor{red}{{\bf 0.0676}} &  {\bf 0.0659 } \\
+                    & \textcolor{blue}{(0.042)} & \textcolor{red}{(0.051)} & (0.051)  \\
+   \hline 
+   contamination & \textcolor{red}{{\bf 0.3926}} & {\bf 0.0742} & \textcolor{blue}{{\bf 0.0733}} \\
+       by Cauchy           & \textcolor{red}{(1.129)} & (0.056) & \textcolor{blue}{(0.055)} \\
+   \hline
+  \end{tabular}
+  \end{center}
+   \caption{Mean Absolute Error ({\bf MAE}) for various estimators in the (univariate) Gaussian scale experiments (between parenthesis: the standard deviation of the absolute error over all experiments). The best MAE performance is highlighted in \textcolor{blue}{blue} and the worst one in \textcolor{red}{red}.}
+ \label{table2}
+ \end{figure}
+
 ## Robust linear regression
 
+### Dataset and model
+
+To illustrate the use of the   {\sc \textbf{regMMD}}  package to perform robust linear regression we use the \textsf{R} built-in dataset \texttt{airquality}. The dataset contains daily measurements of four variables related to air quality in New York, namely the ozone concentration (variable \texttt{Ozone}), the temperature (variable \texttt{Temp}), the wind speed (variable \texttt{Wind}) and the solar radiation (variable \texttt{Solar.R}). Observations are reported for the period ranging from the 1st of May 1973 to the 30th of September 1973, resulting in a total of  153 observations.  The dataset contains 42 observations with missing values, which we remove from the sample.
+
+
+
+
+
+
+
+\begin{figure}[!t]
+\centering
+\includegraphics[scale=0.4]{figs/ylinreg.pdf}
+\hspace{0.2cm}\includegraphics[scale=0.4]{figs/ypoissreg.pdf}
+\caption{\label{figs:ozone1} Distribution of the observed values of $\log(\text{\texttt{Ozone}})$ (left) and of the observed values of \texttt{Ozone} (right).}
+\end{figure}
+
+ 
+
+
+Our aim is to study the link between the level of ozone concentration and the other three variables present in the dataset using the following linear regression model:
+\begin{equation*}
+\begin{split}
+\log(\text{\texttt{Ozone}}) =\alpha&+\beta_1\text{\texttt{Temp}}+\beta_2(\text{\texttt{Temp}})^2+\beta_3 \text{\texttt{Wind}}+\beta_4 (\text{\texttt{Wind}})^2\\
+&+\beta_5 \text{\texttt{Solar.R}}+\beta_6 (\text{\texttt{Solar.R}})^2+\epsilon 
+\end{split}
+\end{equation*}
+where $\epsilon\sim\mathcal{N}(0,\sigma^2)$. The noise variance $\sigma^2$ is assumed to be unknown so that the model contains 8 parameters that need to be estimated from the data.
+
+
+The left plot in Figure \ref{figs:ozone1} shows the distribution of the observed values for the response variable $\log(\text{\texttt{Ozone}})$. From this plot we observe that there is one isolated observation (i.e.~outlier), for which the observed value of $\log(\text{\texttt{Ozone}})$ is  0.
+
+
+### Data preparation
+
+We start by loading   the  {\sc \textbf{regMMD}}  package and the dataset:
+\begin{verbatim}
+R> require("regMMD")
+R> air.data <- na.omit(airquality)
+\end{verbatim}
+and we prepare the vector {\tt y} containing the observations for the response variable as well as the design  matrix {\tt X}:
+\begin{verbatim}
+R> y <- log(air.data[,1])
+R> X <- as.matrix(air.data[,-c(1,5,6)])
+R> X <- cbind(poly(air.data[,2], degree=2),poly(air.data[,3], degree=2),
+            poly(air.data[,4], degree=2))
+\end{verbatim}
+
+### OLS estimation
+
+We first estimate the model with the ordinary least squares (OLS) approach, using both   the full dataset and the one obtained by removing the outlier:
+\begin{verbatim}
+R> ols.full <- lm(y~X)
+R> ii <- which(y<1)
+R> ols <- lm(y[-ii]~X[-ii,])
+R> print(cbind(ols.full$coefficients,ols$coefficients))
+                 [,1]       [,2]
+(Intercept)  3.4159273  3.4361465
+X1           2.6074060  2.2885974
+X2          -1.2034322 -0.8487403
+X1          -2.2633108 -2.5209875
+X2           1.2894833  1.1009511
+X1           4.2120018  3.9218225
+X2           0.4501812  0.8936152
+
+\end{verbatim}
+
+As expected, the OLS estimates are sensitive to the presence of outliers in the data. In particular, we observe that the unique outlier in the data has a non-negligible impact on the estimated regression coefficient of the variables $(\text{\texttt{Temp}})^2 $ and $(\text{\texttt{Solar.R}})^2$.
+
+### MMD estimation with the default settings\label{sub:MMD_default}
+ 
+Using the default settings of the \texttt{mmd\_reg} function, the computationally cheap  estimator $\tilde{\theta}_{\mathrm{reg}}$ with a Gaussian kernel $k_Y(y,y')$ is used, and the model is estimated as follows:
+\begin{verbatim}
+R> mmd.tilde <- mmd_reg(y,X)
+R> summary(mmd.tilde)
+======================== Summary ========================
+Model:               linearGaussian
+Estimator:           theta tilde (bdwth.x=0)
+---------------------------------------------------------
+  Coefficients           Estimate
+---------------------------------------------------------
+  (Intercept)               3.427
+  X1                       2.3448
+  X2                      -0.8132
+  X3                       -2.329
+  X4                       1.0565
+  X5                       4.1788
+  X6                       0.8369
+---------------------------------------------------------
+  Std. dev. of Gaussian noise : 0.4484 (estimated)
+---------------------------------------------------------
+  Kernel for y: Gaussian with bandwidth 0.5821
+========================================================= 
+\end{verbatim}
+
+As expected from the robustness properties of MMD based estimators, we observe that the estimated values of the regression coefficients are similar to those obtained by OLS on the dataset without the outlier. The \texttt{summary} command also  returns the value of the   bandwidth parameter $\gamma_Y$ obtained with the median heuristic and used to compute the estimator. 
+
+To estimate the model using the alternative estimator $\hat{\theta}_{\mathrm{reg}}$ we need to choose a non-zero value for  \texttt{bdwth.x}. Using the default setting, this estimator is computed as follows:
+\begin{verbatim}
+R> mmd.hat <- mmd_reg(y,X,bdwth.x="auto")
+R> summary(mmd.hat)
+======================== Summary ========================
+Model:               linearGaussian
+Estimator:           theta hat  (bdwth.x>0)
+---------------------------------------------------------
+  Coefficients           Estimate
+---------------------------------------------------------
+  (Intercept)              3.4269
+  X1                       2.3444
+  X2                      -0.8131
+  X3                      -2.3297
+  X4                        1.056
+  X5                       4.1786
+  X6                       0.8374
+---------------------------------------------------------
+  Std. dev. of Gaussian noise : 0.4482 (estimated)
+---------------------------------------------------------
+  Kernel for y: Gaussian with bandwidth 0.5821
+  Kernel for x: Laplace with bandwidth 0.0215
+========================================================= 
+\end{verbatim}
+
+We remark that the  value for  \texttt{bdwth.x} selected by the default setting is very small, and thus the two MMD estimators provide very similar estimates of the model parameters.
+
+### Tuning the fit in MMD estimation
+
+Above, the estimator $\hat{\theta}_{\mathrm{reg}}$ was computed using  a Laplace kernel  for  $k_X(x,x')$ and  a Gaussian kernel $k_Y(y,y')$, and using a data driven approach to select their bandwidth parameters $\gamma_X$ and $\gamma_Y$.  If, for instance, we want to use  a Cauchy kernel  for $k_X(x,x')$  with bandwidth parameter $\gamma_X=0.2$  and a Laplace kernel for $k_Y(y,y')$  with bandwidth parameter $\gamma_Y=0.5$, we can proceed as follows:
+\begin{verbatim}
+R> mmd.hat <- mmd_reg(y,X,bdwth.x=0.1,bdwth.y=0.5,kernel.x="Cauchy",
+ 					                    kernel.y="Laplace")
+R> summary(mmd.hat)
+======================== Summary ========================
+Model:               linearGaussian
+Estimator:           theta hat  (bdwth.x>0)
+---------------------------------------------------------
+  Coefficients           Estimate
+---------------------------------------------------------
+  (Intercept)              3.4189
+  X1                       2.3633
+  X2                      -0.7652
+  X3                      -2.3423
+  X4                       1.0684
+  X5                       4.2731
+  X6                       0.8787
+---------------------------------------------------------
+  Std. dev. of Gaussian noise : 0.4492 (estimated)
+---------------------------------------------------------
+  Kernel for y: Laplace with bandwidth 0.5
+  Kernel for x: Cauchy with bandwidth 0.1
+========================================================= 
+\end{verbatim}
+
+We recall that different choices for the kernels $k_Y(y,y')$ and $k_X(x,x')$ lead to different MMD estimators, which explains why the estimates obtained here are different from those obtained in Section \ref{sub:MMD_default}.
+
+
+## Robust Poisson regression
+
+### Dataset and model
+
+As a last example we consider the same dataset and task as in Section \ref{sub:Lin_Reg}, but now assume the following Poisson regression model:
+\begin{equation*}
+\begin{split}
+\text{\texttt{Ozone}} \sim\mathrm{Poisson}\bigg(\exp\Big(\alpha&+ \beta_1\text{\texttt{Temp}}+\beta_2(\text{\texttt{Temp}})^2+\beta_3 \text{\texttt{Wind}}+\beta_4 (\text{\texttt{Wind}})^2\\
+&+\beta_5 \text{\texttt{Solar.R}}+\beta_6 (\text{\texttt{Solar.R}})^2\Big)\bigg).
+\end{split}
+\end{equation*}
+Noting that   the response variable is now \texttt{Ozone}  and not $\log (\text{\texttt{Ozone}})$ as in  Section \ref{sub:Lin_Reg}, we modify the vector  {\tt y} accordingly:
+\begin{verbatim}
+R> y <- exp(y)
+\end{verbatim}
+
+
+The right plot in Figure \ref{figs:ozone1} shows the distribution of the observed values for the response variable \texttt{Ozone}. From this plot we observe that there is one isolated observation (i.e.~outlier), for which the observed value of   \texttt{Ozone}  is  larger than 150.
+
+
+### GLM estimation
+
+
+
+We start by estimating the model with the generalized least squares (GLS) approach, using both on the full dataset and  the one obtained by removing the outlier:
+\begin{verbatim}
+R> glm.full <- glm(y~X,family=poisson)
+R> ii <- which(y>150)
+R> glm <- glm(y[-ii]~X[-ii,],family=poisson)
+R> print(cbind(glm.full$coefficients,glm$coefficients))
+                 [,1]         [,2]
+(Intercept)  3.5168945  3.506950377
+X1           2.4621470  2.332854309
+X2          -0.8796456 -0.827578293
+X1          -2.4753279 -2.167010600
+X2           0.9498002  0.559589428
+X1           4.0664346  4.289933463
+X2          -0.3247376 -0.003300254
+\end{verbatim}
+
+It is well-known that the GLM estimator is sensitive to outliers and, as a result, we observe that the unique outlier present in the data has a non-negligible impact on the estimated regression coefficients of the model.
+
+
+### MMD estimation with default setting
+
+
+
+We first estimate the model parameter using the  estimator $\tilde{\theta}_{\mathrm{reg}}$. Using the default setting of \texttt{mmd\_reg} this is done as follow:
+\begin{verbatim}
+R> mmd.tilde <- mmd_reg(y,X,model="poisson")
+R> summary(mmd.tilde)
+======================== Summary ========================
+Model:               poisson
+Estimator:           theta tilde (bdwth.x=0)
+---------------------------------------------------------
+  Coefficients           Estimate
+---------------------------------------------------------
+  (Intercept)              3.3703
+  X1                       2.4924
+  X2                      -1.0414
+  X3                      -2.3234
+  X4                       0.4451
+  X5                       4.7464
+  X6                      -0.1005
+---------------------------------------------------------
+---------------------------------------------------------
+  Kernel for y: Laplace with bandwidth 18.3848
+========================================================= 
+\end{verbatim}
+
+As for the linear regression example, we observe that the estimated values of the regression coefficients are similar to those obtained by GLM on the dataset without the outlier data point.
+
+Finally, we estimate the model parameters using the estimator $\hat{\theta}_{\mathrm{reg}}$ with its default setting:
+\begin{verbatim}
+R> mmd.hat <- mmd_reg(y,X,model="poisson",bdwth.x="auto")
+Warning message:
+In mmd_reg(y,X,model= "poisson",bdwth.x ="auto") :
+  Warning: The maximum number of iterations  has been reached.
+\end{verbatim}
+In this case, we obtain a warning message indicating that the maximum number of iterations  \texttt{maxit} allowed for the optimization algorithm has been reach. The value of \texttt{maxit}, set by default to  50\,000,  can be increased using the \texttt{control} argument of \texttt{mmd\_reg}. For instance, setting \texttt{maxit}$=10^6$ remove the warning message:
+\begin{verbatim}
+R> mmd.hat <- mmd_reg(y,X,model="poisson",bdwth.x="auto",
+                     control=list(maxit=10^6))
+R> summary(mmd.hat)
+======================== Summary ========================
+Model:               poisson
+Estimator:           theta hat  (bdwth.x>0)
+---------------------------------------------------------
+  Coefficients           Estimate
+---------------------------------------------------------
+  (Intercept)              3.3665
+  X1                        2.503
+  X2                       -1.075
+  X3                       -2.418
+  X4                       0.2654
+  X5                       4.7292
+  X6                      -0.1129
+---------------------------------------------------------
+---------------------------------------------------------
+  Kernel for y: Laplace with bandwidth 18.3848
+  Kernel for x: Laplace with bandwidth 0.0215
+========================================================= 
+\end{verbatim}
+As for the linear regression model, the value of  \texttt{bdwth.x} selected by the data driven approach implemented in \texttt{mmd\_reg} is close to zero and the estimate values of the model parameters are therefore similar to those above obtained with the estimator $\tilde{\theta}_{\mathrm{reg}}$.
 
 # References {.unnumbered}
 
