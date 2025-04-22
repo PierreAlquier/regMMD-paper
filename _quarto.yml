@@ -1,7 +1,7 @@
 project:
   title: "regMMD-paper"
 
-title: "`regMMD`: a package for parametric estimation and regression with maximum mean discrepancy"
+title: "`regMMD`: an `R` package for parametric estimation and regression with maximum mean discrepancy"
 subtitle: "The `R` package `regMMD`"
 author:
   - name: Pierre Alquier
