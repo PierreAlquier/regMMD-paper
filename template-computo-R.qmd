@@ -207,7 +207,7 @@ summary(estim)
 
 We end up the discussion on the Gaussian mean example by a toy experiment: we replicate $N=200$ times the simulation of $n=100$ i.i.d. random variables $\mathcal{N}(-2,1)$ and compare the maximum likelihood estimator (MLE), equal to the empirical mean, the median, and the MMD estimator with a Gaussian and with a Laplace kernel, using in both cases the median heuristic for the bandwidth parameter. We report the Mean Absolute Error over all the simulations (MAE) as well as the standard deviation of the Absolute Error (sdAE).
 ```{r r-code8, echo=TRUE}
-N = 2 # 200
+N = 200
 n = 100
 theta = -2
 err = matrix(data=0,nr=N,nc=4)
@@ -232,7 +232,7 @@ knitr::kable(final,caption="Estimation of the mean in the uncontaminated case")
 ```
 In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead.
 ```{r r-code9, echo=TRUE}
-N = 2 # 200
+N = 200
 n = 100
 theta = -2
 err = matrix(data=0,nr=N,nc=4)
@@ -260,7 +260,7 @@ The results are as expected: under no contamination, the MLE is known to be effi
  
 Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available. We repeat similar experiments as above in this model. We let $N$ and $n$ be as above and sample  the uncontaminated   observations from the $\mathcal{N}(0,1)$ distributions. We them compare the MLE to the MMD with Gaussian and Laplace kernel both in the uncontaminated case  and under Cauchy contamination for two observations. The conclusions are completely similar to the ones obtained in the Gaussian location experiments.
 ```{r r-code10, echo=TRUE}
-N = 2 # 200
+N = 200
 n = 100
 theta=1
 err = matrix(data=0,nr=N,nc=3)
@@ -283,7 +283,7 @@ final = as.table(results)
 knitr::kable(final,caption="Estimation of the standard-deviation in the uncontaminated case")
 ```
 ```{r r-code11, echo=TRUE}
-N = 2 # 200
+N = 200
 n = 100
 theta=1
 err = matrix(data=0,nr=N,nc=3)
@@ -307,7 +307,7 @@ final = as.table(results)
 knitr::kable(final,caption="Estimation of the standard-deviation in the contaminated case")
 ```
 
-## Robust linear regression
+## Robust linear regression {#sec-linreg}
 
 ### Dataset and model
 
@@ -347,201 +347,88 @@ We first estimate the model with the ordinary least squares (OLS) approach, usin
 ols.full = lm(y~X)
 ii = which(y<1)
 ols = lm(y[-ii]~X[-ii,])
-print(cbind(ols.full$coefficients,ols$coefficients))
+results = cbind(ols.full$coefficients,ols$coefficients)
+print(results)
 ```
-As expected, the OLS estimates are sensitive to the presence of outliers in the data. In particular, we observe that the unique outlier in the data has a non-negligible impact on the estimated regression coefficient of the variables $(\text{\texttt{Temp}})^2 $ and $(\text{\texttt{Solar.R}})^2$.
+As expected, the OLS estimates are sensitive to the presence of outliers in the data. In particular, we observe that the unique outlier in the data has a non-negligible impact on the estimated regression coefficient of the variables $(\text{\texttt{Temp}})^2$ and $(\text{\texttt{Solar.R}})^2$.
 
-### MMD estimation with the default settings\label{sub:MMD_default}
+### MMD estimation with the default settings {#sec-regdefault}
  
-Using the default settings of the \texttt{mmd\_reg} function, the computationally cheap  estimator $\tilde{\theta}_{\mathrm{reg}}$ with a Gaussian kernel $k_Y(y,y')$ is used, and the model is estimated as follows:
-\begin{verbatim}
-R> mmd.tilde <- mmd_reg(y,X)
-R> summary(mmd.tilde)
-======================== Summary ========================
-Model:               linearGaussian
-Estimator:           theta tilde (bdwth.x=0)
----------------------------------------------------------
-  Coefficients           Estimate
----------------------------------------------------------
-  (Intercept)               3.427
-  X1                       2.3448
-  X2                      -0.8132
-  X3                       -2.329
-  X4                       1.0565
-  X5                       4.1788
-  X6                       0.8369
----------------------------------------------------------
-  Std. dev. of Gaussian noise : 0.4484 (estimated)
----------------------------------------------------------
-  Kernel for y: Gaussian with bandwidth 0.5821
-========================================================= 
-\end{verbatim}
+Using the default settings of the `mmd_reg` function, the computationally cheap  estimator $\tilde{\theta}_{\mathrm{reg}}$ with a Gaussian kernel $k_Y(y,y')$ is used, and the model is estimated as follows:
+```{r r-code16, echo=TRUE}
+mmd.tilde = mmd_reg(y,X)
+summary(mmd.tilde)
+```
 
-As expected from the robustness properties of MMD based estimators, we observe that the estimated values of the regression coefficients are similar to those obtained by OLS on the dataset without the outlier. The \texttt{summary} command also  returns the value of the   bandwidth parameter $\gamma_Y$ obtained with the median heuristic and used to compute the estimator. 
+As expected from the robustness properties of MMD based estimators, we observe that the estimated values of the regression coefficients are similar to those obtained by OLS on the dataset without the outlier. The `summary` command also  returns the value of the bandwidth parameter $\gamma_Y$ obtained with the median heuristic and used to compute the estimator. 
 
-To estimate the model using the alternative estimator $\hat{\theta}_{\mathrm{reg}}$ we need to choose a non-zero value for  \texttt{bdwth.x}. Using the default setting, this estimator is computed as follows:
-\begin{verbatim}
-R> mmd.hat <- mmd_reg(y,X,bdwth.x="auto")
-R> summary(mmd.hat)
-======================== Summary ========================
-Model:               linearGaussian
-Estimator:           theta hat  (bdwth.x>0)
----------------------------------------------------------
-  Coefficients           Estimate
----------------------------------------------------------
-  (Intercept)              3.4269
-  X1                       2.3444
-  X2                      -0.8131
-  X3                      -2.3297
-  X4                        1.056
-  X5                       4.1786
-  X6                       0.8374
----------------------------------------------------------
-  Std. dev. of Gaussian noise : 0.4482 (estimated)
----------------------------------------------------------
-  Kernel for y: Gaussian with bandwidth 0.5821
-  Kernel for x: Laplace with bandwidth 0.0215
-========================================================= 
-\end{verbatim}
+To estimate the model using the alternative estimator $\hat{\theta}_{\mathrm{reg}}$ we need to choose a non-zero value for `bdwth.x`. Using the default setting, this estimator is computed as follows:
+```{r r-code17, echo=TRUE}
+mmd.hat = mmd_reg(y,X,bdwth.x="auto")
+summary(mmd.hat)
+```
 
-We remark that the  value for  \texttt{bdwth.x} selected by the default setting is very small, and thus the two MMD estimators provide very similar estimates of the model parameters.
+We remark that the  value for `bdwth.x` selected by the default setting is very small, and thus the two MMD estimators provide very similar estimates of the model parameters.
 
 ### Tuning the fit in MMD estimation
 
-Above, the estimator $\hat{\theta}_{\mathrm{reg}}$ was computed using  a Laplace kernel  for  $k_X(x,x')$ and  a Gaussian kernel $k_Y(y,y')$, and using a data driven approach to select their bandwidth parameters $\gamma_X$ and $\gamma_Y$.  If, for instance, we want to use  a Cauchy kernel  for $k_X(x,x')$  with bandwidth parameter $\gamma_X=0.2$  and a Laplace kernel for $k_Y(y,y')$  with bandwidth parameter $\gamma_Y=0.5$, we can proceed as follows:
-\begin{verbatim}
-R> mmd.hat <- mmd_reg(y,X,bdwth.x=0.1,bdwth.y=0.5,kernel.x="Cauchy",
- 					                    kernel.y="Laplace")
-R> summary(mmd.hat)
-======================== Summary ========================
-Model:               linearGaussian
-Estimator:           theta hat  (bdwth.x>0)
----------------------------------------------------------
-  Coefficients           Estimate
----------------------------------------------------------
-  (Intercept)              3.4189
-  X1                       2.3633
-  X2                      -0.7652
-  X3                      -2.3423
-  X4                       1.0684
-  X5                       4.2731
-  X6                       0.8787
----------------------------------------------------------
-  Std. dev. of Gaussian noise : 0.4492 (estimated)
----------------------------------------------------------
-  Kernel for y: Laplace with bandwidth 0.5
-  Kernel for x: Cauchy with bandwidth 0.1
-========================================================= 
-\end{verbatim}
-
-We recall that different choices for the kernels $k_Y(y,y')$ and $k_X(x,x')$ lead to different MMD estimators, which explains why the estimates obtained here are different from those obtained in Section \ref{sub:MMD_default}.
-
+Above, the estimator $\hat{\theta}_{\mathrm{reg}}$ was computed using  a Laplace kernel  for$k_X(x,x')$ and  a Gaussian kernel $k_Y(y,y')$, and using a data driven approach to select their bandwidth parameters $\gamma_X$ and $\gamma_Y$.  If, for instance, we want to use  a Cauchy kernel  for $k_X(x,x')$  with bandwidth parameter $\gamma_X=0.2$  and a Laplace kernel for $k_Y(y,y')$  with bandwidth parameter $\gamma_Y=0.5$, we can proceed as follows:
+```{r r-code18, echo=TRUE}
+mmd.hat = mmd_reg(y,X,bdwth.x=0.1,bdwth.y=0.5,kernel.x="Cauchy",kernel.y="Laplace")
+summary(mmd.hat)
+```
+We recall that different choices for the kernels $k_Y(y,y')$ and $k_X(x,x')$ lead to different MMD estimators, which explains why the estimates obtained here are different from those obtained in @sec-regdefault.
 
 ## Robust Poisson regression
 
 ### Dataset and model
 
-As a last example we consider the same dataset and task as in Section \ref{sub:Lin_Reg}, but now assume the following Poisson regression model:
-\begin{equation*}
+As a last example we consider the same dataset and task as in @sec-linreg, but now assume the following Poisson regression model:
+$$
 \begin{split}
 \text{\texttt{Ozone}} \sim\mathrm{Poisson}\bigg(\exp\Big(\alpha&+ \beta_1\text{\texttt{Temp}}+\beta_2(\text{\texttt{Temp}})^2+\beta_3 \text{\texttt{Wind}}+\beta_4 (\text{\texttt{Wind}})^2\\
 &+\beta_5 \text{\texttt{Solar.R}}+\beta_6 (\text{\texttt{Solar.R}})^2\Big)\bigg).
 \end{split}
-\end{equation*}
-Noting that   the response variable is now \texttt{Ozone}  and not $\log (\text{\texttt{Ozone}})$ as in  Section \ref{sub:Lin_Reg}, we modify the vector  {\tt y} accordingly:
-\begin{verbatim}
-R> y <- exp(y)
-\end{verbatim}
-
-
-The right plot in Figure \ref{figs:ozone1} shows the distribution of the observed values for the response variable \texttt{Ozone}. From this plot we observe that there is one isolated observation (i.e.~outlier), for which the observed value of   \texttt{Ozone}  is  larger than 150.
-
+$$
+Noting that   the response variable is now `Ozone`  and not its logarithm as in  Section \ref{sub:Lin_Reg}, we modify the vector `y` accordingly:
+```{r r-code19, echo=TRUE}
+y = air.data[,1]
+```
+In the histogram above we observe that there is one isolated observation (i.e.~outlier), for which the observed value of `Ozone`  is larger than $150$.
 
 ### GLM estimation
 
-
-
 We start by estimating the model with the generalized least squares (GLS) approach, using both on the full dataset and  the one obtained by removing the outlier:
-\begin{verbatim}
-R> glm.full <- glm(y~X,family=poisson)
-R> ii <- which(y>150)
-R> glm <- glm(y[-ii]~X[-ii,],family=poisson)
-R> print(cbind(glm.full$coefficients,glm$coefficients))
-                 [,1]         [,2]
-(Intercept)  3.5168945  3.506950377
-X1           2.4621470  2.332854309
-X2          -0.8796456 -0.827578293
-X1          -2.4753279 -2.167010600
-X2           0.9498002  0.559589428
-X1           4.0664346  4.289933463
-X2          -0.3247376 -0.003300254
-\end{verbatim}
+```{r r-code20, echo=TRUE}
+glm.full = glm(y~X,family=poisson)
+ii = which(y>150)
+glm = glm(y[-ii]~X[-ii,],family=poisson)
+results = cbind(glm.full$coefficients,glm$coefficients)
+print(results)
+```
 
 It is well-known that the GLM estimator is sensitive to outliers and, as a result, we observe that the unique outlier present in the data has a non-negligible impact on the estimated regression coefficients of the model.
 
-
 ### MMD estimation with default setting
 
-
-
 We first estimate the model parameter using the  estimator $\tilde{\theta}_{\mathrm{reg}}$. Using the default setting of \texttt{mmd\_reg} this is done as follow:
-\begin{verbatim}
-R> mmd.tilde <- mmd_reg(y,X,model="poisson")
-R> summary(mmd.tilde)
-======================== Summary ========================
-Model:               poisson
-Estimator:           theta tilde (bdwth.x=0)
----------------------------------------------------------
-  Coefficients           Estimate
----------------------------------------------------------
-  (Intercept)              3.3703
-  X1                       2.4924
-  X2                      -1.0414
-  X3                      -2.3234
-  X4                       0.4451
-  X5                       4.7464
-  X6                      -0.1005
----------------------------------------------------------
----------------------------------------------------------
-  Kernel for y: Laplace with bandwidth 18.3848
-========================================================= 
-\end{verbatim}
+```{r r-code21, echo=TRUE}
+mmd.tilde = mmd_reg(y,X,model="poisson")
+summary(mmd.tilde)
+```
 
 As for the linear regression example, we observe that the estimated values of the regression coefficients are similar to those obtained by GLM on the dataset without the outlier data point.
 
 Finally, we estimate the model parameters using the estimator $\hat{\theta}_{\mathrm{reg}}$ with its default setting:
-\begin{verbatim}
-R> mmd.hat <- mmd_reg(y,X,model="poisson",bdwth.x="auto")
-Warning message:
-In mmd_reg(y,X,model= "poisson",bdwth.x ="auto") :
-  Warning: The maximum number of iterations  has been reached.
-\end{verbatim}
-In this case, we obtain a warning message indicating that the maximum number of iterations  \texttt{maxit} allowed for the optimization algorithm has been reach. The value of \texttt{maxit}, set by default to  50\,000,  can be increased using the \texttt{control} argument of \texttt{mmd\_reg}. For instance, setting \texttt{maxit}$=10^6$ remove the warning message:
-\begin{verbatim}
-R> mmd.hat <- mmd_reg(y,X,model="poisson",bdwth.x="auto",
-                     control=list(maxit=10^6))
-R> summary(mmd.hat)
-======================== Summary ========================
-Model:               poisson
-Estimator:           theta hat  (bdwth.x>0)
----------------------------------------------------------
-  Coefficients           Estimate
----------------------------------------------------------
-  (Intercept)              3.3665
-  X1                        2.503
-  X2                       -1.075
-  X3                       -2.418
-  X4                       0.2654
-  X5                       4.7292
-  X6                      -0.1129
----------------------------------------------------------
----------------------------------------------------------
-  Kernel for y: Laplace with bandwidth 18.3848
-  Kernel for x: Laplace with bandwidth 0.0215
-========================================================= 
-\end{verbatim}
-As for the linear regression model, the value of  \texttt{bdwth.x} selected by the data driven approach implemented in \texttt{mmd\_reg} is close to zero and the estimate values of the model parameters are therefore similar to those above obtained with the estimator $\tilde{\theta}_{\mathrm{reg}}$.
-
+```{r r-code22, echo=TRUE}
+mmd.hat = mmd_reg(y,X,model="poisson",bdwth.x="auto")
+```
+In this case, we obtain a warning message indicating that the maximum number of iterations `maxit` allowed for the optimization algorithm has been reach. The value of `maxit`, set by default to  $50,000$, can be increased using the `control` argument of `mmd_reg`. For instance, setting `maxit=10^6` remove the warning message:
+```{r r-code23, echo=TRUE}
+mmd.hat = mmd_reg(y,X,model="poisson",bdwth.x="auto",control=list(maxit=10^6))
+summary(mmd.hat)
+```
+As for the linear regression model, the value of `bdwth.x` selected by the data driven approach implemented in `mmd_reg` is close to zero and the estimate values of the model parameters are therefore similar to those above obtained with the estimator $\tilde{\theta}_{\mathrm{reg}}$.
 
 # References {.unnumbered}
 
