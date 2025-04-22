@@ -205,7 +205,60 @@ estim =  mmd_est(x,model="Gaussian.loc",par2=1,bdwth=0.6,kernel="Laplace")
 summary(estim)
 ```
 
-We end up the discussion on the Gaussian mean example by a toy experiment: we replicate $N=200$ times the simulation of $n=100$ i.i.d.~random variables $\mathcal{N}(-2,1)$ and compare the maximum likelihood estimator (MLE), equal to  the empirical mean, the median, and   the MMD estimator  with a Gaussian and with a Laplace kernel, using in both cases the median heuristic to choose the bandwidth parameter. In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead. The mean absolute error (MAE) of each estimator over all experiments are reported in Figure~\ref{table1}. The results are as expected: under no contamination, the MLE is known to be efficient and is therefore the best estimator. On the other hand, the MLE (i.e.~the empirical mean) is known to be very sensitive to outliers. In contrast,  the    MMD estimators and the median are robust estimators of $\theta$. We refer the reader to~\cite{briol2019statistical,cherief2019finite} for more discussions and experiments on the robustness   MMD estimators.
+We end up the discussion on the Gaussian mean example by a toy experiment: we replicate $N=200$ times the simulation of $n=100$ i.i.d. random variables $\mathcal{N}(-2,1)$ and compare the maximum likelihood estimator (MLE), equal to the empirical mean, the median, and the MMD estimator with a Gaussian and with a Laplace kernel, using in both cases the median heuristic for the bandwidth parameter. We report the Mean Absolute Error over all the simulations (MAE) as well as the standard deviation of the Absolute Error (sdAE).
+
+```{r r-code8, echo=TRUE}
+N = 10 # 200
+n = 100
+theta = -2
+err = matrix(data=0,nr=N,nc=4)
+for (i in 1:N)
+{
+	X = rnorm(n,theta,1)
+	thetamle = mean(X)
+	thetamed = median(X)
+	estim = mmd_est(X,model="Gaussian.loc",par2=1)
+	thetanew1 = estim$estimator
+	estim = mmd_est(X,model="Gaussian.loc",par2=1,kernel="Laplace")
+	thetanew2 = estim$estimator
+	err[i,] = abs(theta-c(thetamle,thetanew1,thetanew2,thetamed))
+}
+results = matrix(0,nr=2,nc=4)
+results[1,] = colSums(err)/N
+for (i in 1:4) results[2,i] = sd(err[,i])
+colnames(results) = c('MLE','MMD (Gaussian kernel)','MMD (Laplace kernel)','Median')
+rownames(results) = c('MAE','sdAE')
+final = as.table(results)
+knitr::kable(final)
+```
+In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead.
+```{r r-code9, echo=TRUE}
+N = 10 # 200
+n = 100
+theta = -2
+err = matrix(data=0,nr=N,nc=4)
+for (i in 1:N)
+{
+	cont = rcauchy(2)
+	X = c(rnorm(n-2,theta,1),cont)
+	thetamle = mean(X)
+	thetamed = median(X)
+	estim = mmd_est(X,model="Gaussian.loc",par2=1)
+	thetanew1 = estim$estimator
+	estim = mmd_est(X,model="Gaussian.loc",par2=1,kernel="Laplace")
+	thetanew2 = estim$estimator
+	err[i,] = abs(theta-c(thetamle,thetanew1,thetanew2,thetamed))
+}
+results = matrix(0,nr=2,nc=4)
+results[1,] = colSums(err)/N
+for (i in 1:4) results[2,i] = sd(err[,i])
+colnames(results) = c('MLE','MMD (Gaussian kernel)','MMD (Laplace kernel)','Median')
+rownames(results) = c('MAE','sdAE')
+final = as.table(results)
+knitr::kable(final)
+```
+
+The results are as expected: under no contamination, the MLE is known to be efficient and is therefore the best estimator. On the other hand, the MLE (i.e.~the empirical mean) is known to be very sensitive to outliers. In contrast,  the    MMD estimators and the median are robust estimators of $\theta$. We refer the reader to~\cite{briol2019statistical,cherief2019finite} for more discussions and experiments on the robustness   MMD estimators.
  
  Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available:
  \begin{verbatim}
