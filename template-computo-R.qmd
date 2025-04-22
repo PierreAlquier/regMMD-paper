@@ -73,7 +73,7 @@ has the advantage to be defined through a criterion which is a sum of only $n$ t
 The package `regMMD` allows to compute the above estimators  in a large number of classical models. We first provide an overview of the two main functions with their default settings, and then give some details on their implementations and parameters. These functions have many options related to the choice of kernels, the choice of the bandwidth parameters and of the parameters of the optimization algorithms used to compute the estimators. To save space, in this section we only discuss the options that are fundamental from a statistical perspective. We refer the reader to the package documentation for a full description of the available options.
 
 We start by loading the package and fixing the seed to ensure reproducibility.
-```{r r-code, echo=TRUE}
+```{r r-code0, echo=TRUE}
 require("regMMD")
 set.seed(1)
 ```
@@ -82,10 +82,15 @@ set.seed(1)
 
 The function `mmd_est` performs parametric estimation as described in @sec-para. Its required arguments are  the data `x` and the type of model `model` (see @sec-models for the list of available models). Each model implemented in the package has one or two  parameters, namely `par1` and `par2`. If the   model contains a parameter that is fixed  (i.e. not estimated from the data) then its value must be specified by the user. On the other hand, a value for a parameter   that we want to estimate from the data  does not have to be given as an input. If, however, a value is provided then it is used to initialize  the optimization algorithm that serves at computing the estimator (see below). Otherwise  an initialization by default is used.
 
-For example, there are three Gaussian univariate models: `Gaussian.loc`, `Gaussian.scale` and `Gaussian`. In each model `par1` is the mean and `par2` is the standard deviation.  In the `Gaussian` model the two parameters `par1` and `par2` are estimated from the data and the MMD estimator of $\theta=$(`par1`,`par1`) can be computed as follows:
+For example, there are three Gaussian univariate models: `Gaussian.loc`, `Gaussian.scale` and `Gaussian`. In each model `par1` is the mean and `par2` is the standard deviation. We will use the following data:
+```{r r-code1, echo=TRUE}
+x = rnorm(100,1.9,1)
+hist(x)
+```
+
+In the `Gaussian` model the two parameters `par1` and `par2` are estimated from the data and the MMD estimator of $\theta=$(`par1`,`par1`) can be computed as follows:
 
 ```{r r-code2, echo=TRUE}
-x = rnorm(100,4,1)
 estim = mmd_est(x,model="Gaussian")
 summary(estim)
 ```
@@ -95,14 +100,16 @@ By contrast, if we enter
 estim = mmd_est(x,model="Gaussian",par1=0,par2=1)
 summary(estim)
 ```
-we simply enforce the optimization algorithm that serves at computing the estimator to use $\theta_0=(0,1)$ as starting value. In the {\tt Gaussian.loc} model only the location parameter (the mean) is estimated. Thus, to compute $\theta=$ {\tt par1} it is necessary to specify the standard deviation {\tt par2}. For instance,
-\begin{verbatim}
-R> estim <- mmd_est(x,model="Gaussian.loc",par2=1)
-\end{verbatim}
-will estimate $\theta$ in the model $\mathcal{N}(\theta,1)$. If we provide a value for {\tt par1} then  the optimization algorithm used to compute $\hat{\theta}$ will use $\theta_0={\tt par1}$ as starting value. Finally, In the {\tt Gaussian.scale} model only the scale parameter (standard deviation) is estimated. That is, to estimate  $\theta={\tt par2}$ in e.g.~the $\mathcal{N}(4,\theta^2)$ distribution we can use
-\begin{verbatim}
-R> estim <- mmd_est(x,model="Gaussian.scale",par1=4)
-\end{verbatim}
+we simply enforce the optimization algorithm that serves at computing the estimator to use $\theta_0=(0,1)$ as starting value. In the `Gaussian.loc` model only the location parameter (the mean) is estimated. Thus, to compute $\theta=$ `par1` it is necessary to specify the standard deviation `par2`. For instance,
+```{r r-code4, echo=TRUE}
+estim = mmd_est(x,model="Gaussian.loc",par2=1)
+summary(estim)
+```
+will estimate $\theta$ in the model $\mathcal{N}(\theta,1)$. If we provide a value for `par1` then the optimization algorithm used to compute $\hat{\theta}$ will use $\theta_0=$`par1` as starting value. Finally, In the `Gaussian.scale` model only the scale parameter (standard deviation) is estimated. That is, to estimate  $\theta=$`par2` in e.g. the $\mathcal{N}(4,\theta^2)$ distribution we can use
+```{r r-code5, echo=TRUE}
+estim = mmd_est(x,model="Gaussian.scale",par1=2)
+summary(estim)
+```
 
 ## Overview of the function `mmd_reg`
 
