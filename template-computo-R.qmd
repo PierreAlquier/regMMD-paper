@@ -1,5 +1,23 @@
 # Introduction
 
+
+In some models, popular estimators such as the maximum likelihood estimator (MLE) can become very unstable in the presence of outliers. This has motivated research into robust estimation procedures that would not suffer from this issue. Various notions of robustness have been proposed, depending on the type of contamination in the data. Notably, the Huber contamination model~\cite{huber1964robust} considers random outliers while, more recently, stricter notions have been proposed to ensure robustness against adversarial contamination of the data.
+
+The maximum mean discrepancy (MMD) is a kernel-based metric that has received considerable attention in the past 15 years. It allows for the development of tools for nonparametric tests and estimation~\cite{pmlr-v48-chwialkowski16,gretton2007kernel}. We refer the reader to~\cite{muandet2017kernel} for a comprehensive introduction to MMD and its applications. A recent series of papers has suggested that minimum distance estimators (MDEs) based on the MMD are robust to both Huber and adversarial contamination. These estimators were initially proposed for training generative AI~\cite{dziugaite2015training,sutherland2016generative,li2017mmd}, and the study of their statistical properties for parametric estimation, including robustness, was initiated by~\cite{briol2019statistical,cherief2019finite,alquier2024universal}. We also point out that the MMD has been successfully used to define robust estimators that are not MDEs, such as bootstrap methods based on MMD~\cite{dellaporta2022robust} or Approximate Bayesian Computation~\cite{legramanti2022concentration}.
+
+Unfortunately, we are not aware of any software that allows for the computation of MMD-based MDEs. To make these tools available to the statistical community, we developed the {\textsf{R} package called {\sc \textbf{regMMD}}. This package allows for the minimization of the MMD distance between the empirical distribution and a statistical model. Various parametric models can be fitted, including continuous distributions such as Gaussian and gamma, and discrete distributions such as Poisson and binomial. Many regression models are also available, including linear, logistic, and gamma regression. The {\sc \textbf{regMMD}} package is available on the {\sc CRAN} website~\cite{r2013r}:
+\url{https://cran.r-project.org/web/packages/regMMD/}
+
+The optimization is based on the strategies proposed by~\cite{briol2019statistical,cherief2019finite,alquier2024universal}. For some models  we have an explicit formula for the gradient of the MMD, in which   case  we   use gradient descent  (see e.g.~\cite{boyd2004convex,nesterov2018lectures}) to perform the optimization. For most models  such a formula does not exist, but we can however   approximate the gradient without bias by Monte Carlo sampling. This allows to use the stochastic gradient algorithm of ~\cite{robbins1951stochastic}, that is one of the most popular estimation methods in machine learning~\cite{bottou-mlss-2004}. We refer to the reader to~\cite{wright2018optimization,duchi2018introductory} and Chapter 5 in~\cite{bach2024learning} for comprehensive introductions to otpimization for statistics and machine learning, including stochastic optimization methods.
+
+
+
+The paper is organized as follows. In Section~\ref{section:stat}  we briefly recall the construction of the MMD metric and the MDE estimators based on the MMD. In Section~\ref{section:content}  we detail the content of the package {\sc \textbf{regMMD}}: the available models and kernels, and the optimization procedures used in each case. Finally, in Section~\ref{section:examples}  we provide examples of applications of {\sc \textbf{regMMD}}. Note that these experiments are not meant to be a comprehensive comparison of MMD to other robust estimation procedures. Exhaustive comparisons can be found in~\cite{briol2019statistical,cherief2019finite,alquier2024universal}. The objective is simply to illustrate the use of {\sc \textbf{regMMD}} through pedagogical examples.
+
+
+
+
+
 ## About this document
 
 This document, accompanied with the [hopefully finely tuned git repos](https://github.com/computorg/template-computo-R/), provides a template for writing contributions to **Computo** [@computo]. We show how `R` code [@R-base] can be included and how the repository can be set up for triggering github actions for rendering the document, with dependencies handled by `renv`.

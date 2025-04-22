@@ -1,33 +1,33 @@
 project:
-  title: "template-computo-R"
+  title: "regMMD-paper"
 
-title: "Template for contribution to Computo"
-subtitle: "Example dedicated to `R` users"
+title: "`regMMD`: a package for parametric estimation and regression with maximum mean discrepancy"
+subtitle: "The `R` package `regMMD`"
 author:
-  - name: Jane Doe
+  - name: Pierre Alquier
     corresponding: true
-    email: janedoe@nowhere.moon
-    url: https://janedoe.someplace.themoon.org
-    orcid: 0000-0000-0000-0000
+    email: pierre.alquier@essec.edu
+    url: https://pierrealquier.github.io/
+    orcid: 0000-0003-4249-7337
     affiliations:
-      - name: Name of Affiliation one
-        department: Statistics
-        url: https://someplace.themoon.org
-  - name: John Doe
-    email: johndoe@nowhere.moon
-    url: https://johndoe.someplace.themoon.org
-    orcid: 0000-0000-0000-0000
+      - name: ESSEC Business School
+        department: Department of Information Systems, Data Analytics and Operations
+        url: https://ido-department.essec.edu/
+  - name: Mathieu Gerber
+    email: mathieu.gerber@bristol.ac.uk
+    url: https://research-information.bris.ac.uk/en/persons/mathieu-gerber
+    orcid: 0000-0001-6774-2330
     affiliations:
-      - name: Name of Afficiliation two
-        department: Computer Science
-        url: https://someplace.themoon.org
+      - name: University of Bristol
+        department: School of Mathematics
+        url: https://research-information.bris.ac.uk/en/organisations/school-of-mathematics
 date: last-modified
 date-modified: last-modified
 description: |
   This document provides a template based on the [`quarto`](https://quarto.org/) system for contributions to Computo, using the [`quarto journal extension`](https://github.com/computorg/computo-quarto-extension), the knitr kernel (R user) and [`renv`](https://rstudio.github.io/renv/articles/renv.html) to set-up the dependencies.
 abstract: >+
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur posuere vestibulum facilisis. Aenean pretium orci augue, quis lobortis libero accumsan eu. Nam mollis lorem sit amet pellentesque ullamcorper. Curabitur lobortis libero eget malesuada vestibulum. Nam nec nibh massa. Pellentesque porttitor cursus tellus. Mauris urna erat, rhoncus sed faucibus sit amet, venenatis eu ipsum.
-keywords: [key1, key2, key3]
+ The Maximum Mean Discrepancy (MMD) is a kernel-based metric widely used for nonparametric tests and estimation. Recently, it has also been studied as an objective function for parametric estimation, as it has been shown to yield robust estimators. We have implemented MMD minimization for parameter inference in a wide range of statistical models, including various regression models, within an `R` package called `regMMD`. This paper provides an introduction to the `regMMD` package. We describe the available kernels and optimization procedures, as well as the default settings. Detailed applications to simulated and real data are provided.
+keywords: [parameter estimation, regression, robust statistics, minimum distance estimation,kernel methods, maximum mean discrepancy]
 citation:
   type: article-journal
   container-title: "Computo"
