@@ -23,8 +23,8 @@ author:
         url: https://research-information.bris.ac.uk/en/organisations/school-of-mathematics
 date: last-modified
 date-modified: last-modified
-description: |
-  This document provides a template based on the [`quarto`](https://quarto.org/) system for contributions to Computo, using the [`quarto journal extension`](https://github.com/computorg/computo-quarto-extension), the knitr kernel (R user) and [`renv`](https://rstudio.github.io/renv/articles/renv.html) to set-up the dependencies.
+description:
+  This document provides a complete introduction to the template based on the `regMMD` package for `R`, that implements minimum distance estimation in various parametric and regression models using the maximum mean discrepancy (MMD) metric.
 abstract: >+
  The Maximum Mean Discrepancy (MMD) is a kernel-based metric widely used for nonparametric tests and estimation. Recently, it has also been studied as an objective function for parametric estimation, as it has been shown to yield robust estimators. We have implemented MMD minimization for parameter inference in a wide range of statistical models, including various regression models, within an `R` package called `regMMD`. This paper provides an introduction to the `regMMD` package. We describe the available kernels and optimization procedures, as well as the default settings. Detailed applications to simulated and real data are provided.
 keywords: [parameter estimation, regression, robust statistics, minimum distance estimation,kernel methods, maximum mean discrepancy]

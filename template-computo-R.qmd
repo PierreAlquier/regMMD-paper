@@ -1,276 +1,123 @@
 # Introduction
 
-
 In some models, popular estimators such as the maximum likelihood estimator (MLE) can become very unstable in the presence of outliers. This has motivated research into robust estimation procedures that would not suffer from this issue. Various notions of robustness have been proposed, depending on the type of contamination in the data. Notably, the Huber contamination model [@huber1964robust] considers random outliers while, more recently, stricter notions have been proposed to ensure robustness against adversarial contamination of the data.
 
 The maximum mean discrepancy (MMD) is a kernel-based metric that has received considerable attention in the past 15 years. It allows for the development of tools for nonparametric tests and estimation [@pmlr-v48-chwialkowski16;@gretton2007kernel]. We refer the reader to [@muandet2017kernel] for a comprehensive introduction to MMD and its applications. A recent series of papers has suggested that minimum distance estimators (MDEs) based on the MMD are robust to both Huber and adversarial contamination. These estimators were initially proposed for training generative AI [@dziugaite2015training;@sutherland2016generative;@li2017mmd], and the study of their statistical properties for parametric estimation, including robustness, was initiated by [@briol2019statistical;@cherief2019finite;@alquier2024universal]. We also point out that the MMD has been successfully used to define robust estimators that are not MDEs, such as bootstrap methods based on MMD [@dellaporta2022robust] or Approximate Bayesian Computation [@legramanti2022concentration].
 
-Unfortunately, we are not aware of any software that allows for the computation of MMD-based MDEs. To make these tools available to the statistical community, we developed the `R` package called `regMMD`. This package allows for the minimization of the MMD distance between the empirical distribution and a statistical model. Various parametric models can be fitted, including continuous distributions such as Gaussian and gamma, and discrete distributions such as Poisson and binomial. Many regression models are also available, including linear, logistic, and gamma regression. The `regMMD` package is available on the `CRAN` website [@r2013r]: [regMMD page](https://cran.r-project.org/web/packages/regMMD/)
+Unfortunately, we are not aware of any software that allows for the computation of MMD-based MDEs. To make these tools available to the statistical community, we developed the `R` package called `regMMD`. This package allows for the minimization of the MMD distance between the empirical distribution and a statistical model. Various parametric models can be fitted, including continuous distributions such as Gaussian and gamma, and discrete distributions such as Poisson and binomial. Many regression models are also available, including linear, logistic, and gamma regression. The `regMMD` package is available on the `CRAN` website [@R-base]: [regMMD page](https://cran.r-project.org/web/packages/regMMD/)
 
 The optimization is based on the strategies proposed by [@briol2019statistical;@cherief2019finite;@alquier2024universal]. For some models  we have an explicit formula for the gradient of the MMD, in which   case  we   use gradient descent, see e.g. [@boyd2004convex;@nesterov2018lectures] to perform the optimization. For most models  such a formula does not exist, but we can however   approximate the gradient without bias by Monte Carlo sampling. This allows to use the stochastic gradient algorithm of [@robbins1951stochastic], that is one of the most popular estimation methods in machine learning [@bottou-mlss-2004]. We refer to the reader to  [@wright2018optimization;@duchi2018introductory] and Chapter 5 in [@bach2024learning] for comprehensive introductions to otpimization for statistics and machine learning, including stochastic optimization methods.
 
+The paper is organized as follows. In @sec-stat we briefly recall the construction of the MMD metric and the MDE estimators based on the MMD. In @sec-content  we detail the content of the package `regMMD`: the available models and kernels, and the optimization procedures used in each case. Finally, in @sec-examples we provide examples of applications of `regMMD`. Note that these experiments are not meant to be a comprehensive comparison of MMD to other robust estimation procedures. Exhaustive comparisons can be found in [@briol2019statistical;@cherief2019finite;@alquier2024universal]. The objective is simply to illustrate the use of `regMMD` through pedagogical examples.
 
+# Statistical background {#sec-stat}
 
-The paper is organized as follows. In Section~\ref{section:stat}  we briefly recall the construction of the MMD metric and the MDE estimators based on the MMD. In Section~\ref{section:content}  we detail the content of the package {\sc \textbf{regMMD}}: the available models and kernels, and the optimization procedures used in each case. Finally, in Section~\ref{section:examples}  we provide examples of applications of {\sc \textbf{regMMD}}. Note that these experiments are not meant to be a comprehensive comparison of MMD to other robust estimation procedures. Exhaustive comparisons can be found in~\cite{briol2019statistical,cherief2019finite,alquier2024universal}. The objective is simply to illustrate the use of {\sc \textbf{regMMD}} through pedagogical examples.
+## Parametric estimation {#sec-para}
 
+Let $X_1,\dots,X_n$ be $\mathcal{X}$-valued random variables identically distributed according to some probability distribution $P^0$, and let $(P_\theta,\theta\in\Theta)$ be a statistical model. Given a metric $d$ on probability distributions, we are looking for an estimator of $\theta_0 \in\argmin_{\theta\in\Theta} d(P_\theta,P^0)$ when such a minimum exists. Letting   $\hat{P}_n=\frac{1}{n}\sum_{i=1}^n \delta_{X_i}$ denote the empirical probability distribution, the  minimum distance estimator (MDE) $\hat{\theta}$ is defined as follows:
+$$
+\hat{\theta} \in \argmin_{\theta\in\Theta} d(P_\theta,\hat{P}_n ).
+$$
+The robustness properties of MDEs for well chosen distances was studied as early as in [@wolfowitz1957minimum;@parr1980minimum;@yatracos2022limitations]. When $d(P_\theta,\hat{P}_n )$ has no minimum, the definition can be replaced by an $\varepsilon$-approximate minimizer, without consequences on the the properties of the estimator, as shown in to [@briol2019statistical;@cherief2019finite].
 
+Let $\mathcal{H}$ be a Hilbert space, let $\|\cdot\|_{\mathcal{H}}$ and $\left<\cdot,\cdot\right>_{\mathcal{H}}$  denote the associated norms and scalar products, respectively, and let $\varphi:\mathcal{X}\rightarrow\mathcal{H}$. Then, for any probability distribution $P$ on $\mathcal{X}$ such that $\mathbb{E}_{X\sim P}[\|\varphi(X)\|_{\mathcal{H}}]<+\infty$ we can define the mean embedding $\mu(P)=\mathbb{E}_{X\sim P}[\varphi(X)]$. When the   mean embedding $\mu(P)$ is defined for any probability distribution $P$ (e.g. because the map $\varphi$ is bounded in $\mathcal{H}$), for any probability distributions $P$ and $Q$ we put
+$$
+\mathbb{D}(P,Q) := \left\| \mu(P) - \mu(Q) \right\|_{\mathcal{H}}.
+$$
+Letting $k(x,y)=\left<\varphi(x),\varphi(y)\right>_{\mathcal{H}}$, it appears that $\mathbb{D}(P,Q)$ depends on $\varphi$ only through $k$, as we can rewrite:
+$$
+\mathbb{D}^2(P,Q)
+= \mathbb{E}_{X,X'\sim P} [k(X,X')] -2 \mathbb{E}_{X\sim P,X'\sim Q} [k(X,X')] + \mathbb{E}_{X,X'\sim Q} [k(X,X')].
+$$ {#eq-MMD}
+When $\mathcal{H}$ is actually a RKHS for the kernel $k$ (see [@muandet2017kernel] for a definition), $\mathbb{D}(P,Q)$ is called the maximum mean discrepancy (MMD) between $P$ and $Q$. A condition on $k$ (universal kernel) ensures that the map $\mu$ is injective, and thus that $\mathbb{D}$ satisfies the axioms of a metric. Examples of universal kernels are known, such as the Gaussian kernel $k(x,y)=\exp(-\|x-y\|^2/\gamma^2)$ or the Laplace kernel $k(x,y)=\exp(-\|x-y\|/\gamma)$, see [@muandet2017kernel] for more examples and references to the proofs.
 
+The properties of MDEs based on MMD were studied in [@briol2019statistical;@cherief2019finite]. In particular, when the kernel $k$ is bounded, this estimator enjoys very strong robustness properties. We cite the following very simple result.
 
+::: {#thm-cherief}
 
-## About this document
+## special case of Theorem 3.1 in [@cherief2019finite]
 
-This document, accompanied with the [hopefully finely tuned git repos](https://github.com/computorg/template-computo-R/), provides a template for writing contributions to **Computo** [@computo]. We show how `R` code [@R-base] can be included and how the repository can be set up for triggering github actions for rendering the document, with dependencies handled by `renv`.
-
-## Setup a github repository for preparing your submission
-
-You can start by clicking the **"use this template"** button, on the top of the page of the [github repository associated to this document](https://github.com/computorg/template-computo-R/). Of course, you can set your repository private during the preparation of your manuscript.
-
-## Quarto
-
-[Quarto](https://quarto.org/) is a versatile formatting system for authoring documents integrating markdown, LaTeX and code blocks interpreted either via Jupyter or Knitr (thus supporting Python, R and Julia). It relies on the [Pandoc](https://pandoc.org/MANUAL.html) document converter.
-
-## Requirements
-
-You need [quarto](https://quarto.org/) installed on your system and the [Computo extension](https://github.com/computorg/computo-quarto-extension) to prepare your document. For the latter, once quarto is installed,  run the following to install the extension in the current directory (it creates a `_extension` directory which is ignored by git thanks to `.gitignore` by default):
-
-```.bash
-quarto add computorg/computo-quarto-extension
-```
-
-[`R`](https://www.r-project.org/) and the following `R` packages must be installed on your computer: [`knitr`](https://cran.r-project.org/package=knitr), [`markdown`](https://cran.r-project.org/package=markdown).
-
-## Link with your usual tools
-
-Quarto is expecting a `.qmd` markdown file, but will also works with a standard [`Rmarkdown`](https://rmarkdown.rstudio.com/) (`.Rmd`) file. In addition, especially if you are not comfortable with the command line interface, quarto is fully integrated inside the [Rstudio IDE](https://quarto.org/docs/get-started/hello/rstudio.html) so that you can write and build your quarto document inside Rstudio.
-
-Quarto can also process a [Jupyter notebook](https://quarto.org/docs/get-started/hello/jupyter.html) file if you are used to it (it will just require to add the proper YAML metadata^[the same metadata as in the [`template-computo-R.qmd` file](https://github.com/computorg/template-computo-R/blob/main/template-computo-R.qmd) in the first cell, type "Raw", of the notebook]).
-
-**Note**: _More advanced Jupyter-related functionality like Myst/Jupyter book are not supported in this Quarto setup. The markdown syntax inside the Jupyter notebook should follow the Quarto syntax (c.f. [below](#formatting)). If you are more comfortable with using Myst/Jupyter book, we provide a [specific template](https://github.com/computorg/template-computo-myst) but it will requires more formatting work for Computo editorial team, thus highly encourage authors to use the Quarto templates._
-
-# Formatting
-
-This section covers basic formatting guidelines for quarto documents.
-
-To render a document, run `quarto render`. By default, both PDF and HTML documents are generated:
-
-```.bash
-quarto render template-computo-R.qmd # will render both to html and PDF
-```
-
-::: {.callout-tip}
-## Note
-
-To check the syntax of the formatting below, you can use the `</> source` button at the top left of this document.
+Assume $X_1,\dots,X_n$ are i.i.d. from $P^0$. Assume the kernel $k$ is bounded by $1$. Then
+$$
+\mathbb{E} \left[ \mathbb{D}\left( P_{\hat{\theta}}, P^0 \right) \right]
+\leq \inf_{\theta\in\Theta} \mathbb{D}\left( P_{\theta}, P^0 \right) + \frac{2}{\sqrt{n}}.
+$$
 :::
 
-## Basic markdown formatting
+Additional non-asymptotic results can be found in [@briol2019statistical;@cherief2019finite]. In particular, Theorem 3.1 of [@cherief2019finite] also covers non independent observations (time series). An asymptotic study of $\hat{\theta}$, including conditions for asymptotic normality, can be found in [@briol2019statistical]. All these works provide strong theoretical evidence that $\hat{\theta}$ is very robust to random and adversarial contamination of the data, and this is supported by empirical evidence.
 
-**Bold text** or _italic_
+## Regression
 
-- This is a list
-- With more elements
-- It isn't numbered.
 
-But we can also do a numbered list
-
-1. This is my first item
-2. This is my second item
-3. This is my third item
-
-## Mathematics
-
-### Mathematical formulae
-
-[LaTeX](https://www.latex-project.org/) code is natively supported[^lualatex], which makes it possible to use mathematical formulae:
-
-[^lualatex]: We use [lualatex](https://lualatex.org/) for this purpose.
-
+Let us now consider a regression setting: we observe $(X_1,Y_1),\dots,(X_n,Y_n)$ in $\mathcal{X}\times \mathcal{Y}$ and we want to estimate the conditional distribution $P^0_{Y|X=x}$ of $Y$ given $X=x$ for any $x$. %A direct application of the method in the previous section to the random variables $(X_1,Y_1),\dots, (X_n,Y_n)$ would   lead to the estimation of the joint distribution of the pair $(X,Y)$, which is not the objective of regression models.
+To this end we consider a statistical model $(P_\beta,\beta\in\mathcal{B})$ and model the conditional distribution of $Y$ given $X=x$ by $(P_{\beta(x,\theta)},\theta\in\Theta)$ where $\beta(\cdot,\cdot)$ is a specified function $\mathcal{X}\times\Theta \rightarrow \mathcal{B}$. The first estimator proposed by [@alquier2024universal] is:
 $$
-f(x_1, \dots, x_n; \mu, \sigma^2) =
-\frac{1}{\sigma \sqrt{2\pi}} \exp{\left(- \frac{1}{2\sigma^2}\sum_{i=1}^n(x_i - \mu)^2\right)}
+\hat{\theta}_{\mathrm{reg}}\in\argmin_{\theta\in\Theta} \mathbb{D}\left(
+\frac{1}{n}\sum_{i=1}^n \delta_{X_i} \otimes P_{\beta(X_i,\theta)},
+\frac{1}{n}\sum_{i=1}^n \delta_{X_i} \otimes \delta_{Y_i}
+\right)
 $$
+where $\mathbb{D}$ is the MMD defined by a product kernel, that is  a kernel of the form $k((x,y),(x',y'))=k_X(x,x')k_Y(y,y')$ (non-product kernels are theoretically possible, but not implemented in the package). Asymptotic and non-asymptotic properties of $\hat{\theta}$ are studied in [@alquier2024universal]. The computation of $\hat{\theta}$ is however slow when the sample size $n$ is large, as it can be shown that  the criterion defining this estimator is the sum of $n^2$ terms.
 
-It is also posible to cross-reference an equation, see @eq-mylabel:
-
+By contrast, the following alternative estimator 
 $$
-\begin{aligned}
-D_{x_N} & = \frac12
-\left[\begin{array}{cc}
-x_L^\top & x_N^\top \end{array}\right] \,
-\left[\begin{array}{cc}  L_L & B \\ B^\top & L_N \end{array}\right] \,
-\left[\begin{array}{c}
-x_L \\ x_N \end{array}\right] \\
-& = \frac12 (x_L^\top L_L x_L + 2 x_N^\top B^\top x_L + x_N^\top L_N x_N),
-\end{aligned}
-$$ {#eq-mylabel}
+\tilde{\theta}_{\mathrm{reg}}\in\argmin_{\theta\in\Theta} \frac{1}{n}\sum_{i=1}^n \mathbb{D}\left(
+\delta_{X_i} \otimes P_{\beta(X_i,\theta)},
+\delta_{X_i} \otimes \delta_{Y_i}
+\right),
+$$
+has the advantage to be defined through a criterion which is a sum of only $n$ terms. Intuitively, this estimator can be interpreted as a special case of $\hat{\theta}_{\mathrm{reg}}$ where $k_X(x,x')=\mathbf{1}_{ \{x=x'\}}$. An asymptotic study of $\tilde{\theta}_{\mathrm{reg}}$ is provided by [@alquier2024universal]. The theory and the experiments suggest that both estimators are robust, but that $\hat{\theta}_{\mathrm{reg}}$ is more robust than $\tilde{\theta}_{\mathrm{reg}}$. However, for computations reasons, for large sample sizes $n$ ($n>5\,000$, say) only the latter estimator  can be computed in a reasonable amount of time.
 
-### Theorems and other amsthem-like environments
+# Package content and implementation {#sec-content}
 
-Quarto includes a nice support for theorems, with predefined prefix labels for theorems, lemmas, proposition, etc. see [this page](https://quarto.org/docs/authoring/cross-references.html#theorems-and-proofs). Here is a simple example:
+The package `regMMD` allows to compute the above estimators  in a large number of classical models. We first provide an overview of the two main functions with their default settings, and then give some details on their implementations and parameters. These functions have many options related to the choice of kernels, the choice of the bandwidth parameters and of the parameters of the optimization algorithms used to compute the estimators. To save space, in this section we only discuss the options that are fundamental from a statistical perspective. We refer the reader to the package documentation for a full description of the available options.
 
-::: {#thm-slln}
-## Strong law of large numbers
-
-The sample average converges almost surely to the expected value:
-
-$$\overline{X}_n\ \xrightarrow{\text{a.s.}}\ \mu \qquad\textrm{when}\ n \to \infty.$$
-:::
-
-See @thm-slln.
-
-## R Code
-
-Quarto uses either Jupyter or knitr to render code chunks. This can be triggered in the yaml header. In this tutorial, we use `knitr` (`R` and packages `knitr`, `markdown` must be installed on your computer).
-
-``` yaml
----
-title: "My Document"
-author "Jane Doe"
----
-```
-
-`R` code [@R-base] chunks may be embedded as follows:
-
+We start by loading the package and fixing the seed to ensure reproducibility.
 ```{r r-code, echo=TRUE}
-x <- rnorm(10)
+require("regMMD")
+set.seed(1)
 ```
 
-## Figures
+## Overview of the function `mmd_est`
 
-Plots can be generated as follows:
+The function `mmd_est` performs parametric estimation as described in @sec-para. Its required arguments are  the data `x` and the type of model `model` (see @sec-models for the list of available models). Each model implemented in the package has one or two  parameters, namely `par1` and `par2`. If the   model contains a parameter that is fixed  (i.e. not estimated from the data) then its value must be specified by the user. On the other hand, a value for a parameter   that we want to estimate from the data  does not have to be given as an input. If, however, a value is provided then it is used to initialize  the optimization algorithm that serves at computing the estimator (see below). Otherwise  an initialization by default is used.
 
-```{r pressure, message = FALSE}
-library("ggplot2")
-p <- ggplot(mpg, aes(displ, hwy)) +
-  geom_point() +
-  geom_smooth()
-p
+For example, there are three Gaussian univariate models: `Gaussian.loc`, `Gaussian.scale` and `Gaussian`. In each model `par1` is the mean and `par2` is the standard deviation.  In the `Gaussian` model the two parameters `par1` and `par2` are estimated from the data and the MMD estimator of $\theta=$(`par1`,`par1`) can be computed as follows:
+
+```{r r-code2, echo=TRUE}
+x = rnorm(100,4,1)
+estim = mmd_est(x,model="Gaussian")
+summary(estim)
 ```
 
-It is also possible to create figures from static images:
-
-:::{#fig-logo}
-
-![](https://computo.sfds.asso.fr/assets/img/logo_text_vertical.png){height=200}
-
-Computo logo (label)
-:::
-
-**Note:** _Until Quarto version 1.3+ is released, including a remote image (from a web URL) in a document (like the image above) will work in the rendered HTML document but will generate an error when building the PDF document (c.f. [related bug report](https://github.com/quarto-dev/quarto-cli/issues/4443))._
-
-## Tables
-
-Tables (with label: `@tbl-mylabel` renders @tbl-mylabel) can be generated with markdown as follows
-
-| Tables   |      Are      |  Cool |
-|----------|:-------------:|------:|
-| col 1 is |  left-aligned | $1600 |
-| col 2 is |    centered   |   $12 |
-| col 3 is | right-aligned |    $1 |
-: my table caption {#tbl-mylabel}
-
-Table can also be generated by some code, for instance with knitr here:
-
-```{r cars}
-knitr::kable(summary(cars), caption = "Table caption.")
+By contrast, if we enter
+```{r r-code3, echo=TRUE}
+estim = mmd_est(x,model="Gaussian",par1=0,par2=1)
+summary(estim)
 ```
+we simply enforce the optimization algorithm that serves at computing the estimator to use $\theta_0=(0,1)$ as starting value. In the {\tt Gaussian.loc} model only the location parameter (the mean) is estimated. Thus, to compute $\theta=$ {\tt par1} it is necessary to specify the standard deviation {\tt par2}. For instance,
+\begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian.loc",par2=1)
+\end{verbatim}
+will estimate $\theta$ in the model $\mathcal{N}(\theta,1)$. If we provide a value for {\tt par1} then  the optimization algorithm used to compute $\hat{\theta}$ will use $\theta_0={\tt par1}$ as starting value. Finally, In the {\tt Gaussian.scale} model only the scale parameter (standard deviation) is estimated. That is, to estimate  $\theta={\tt par2}$ in e.g.~the $\mathcal{N}(4,\theta^2)$ distribution we can use
+\begin{verbatim}
+R> estim <- mmd_est(x,model="Gaussian.scale",par1=4)
+\end{verbatim}
 
-## Handling references {#sec-references}
+## Overview of the function `mmd_reg`
 
-### Bibliographic references
+## Kernels and bandwidth parameters
 
-References are displayed as footnotes using
-[BibTeX](http://www.bibtex.org/), e.g. `[@computo]` will be displayed
-as [@computo], where `computo` is the bibtex key for this specific
-entry. The bibliographic information is automatically retrieved from
-the `.bib` file specified in the header of this document (here:
-`references.bib`).
+## Optimization methods
 
-### Other cross-references
+## Available models {#sec-models}
 
-As already (partially) seen, Quarto includes a mechanism similar to the
-bibliographic references for sections, equations, theorems, figures,
-lists, etc. Have a look at [this
-page](https://quarto.org/docs/authoring/cross-references.html).
+# Detailed examples {#sec-examples}
 
-## Advanced formatting
+## Toy example: robust estimation in the univariate Gaussian model
 
-Advanced formatting features are possible and documented (including interactive plots, pseudo-code, (Tikz) diagrams, Lua filters, mixing R + Python in the same document), but are beyond the scope of this simple introduction. We point several entries in this direction.
+## Robust linear regression
 
-::: {.callout-warning}
-## More information
-
-- [The Quarto web site](https://quarto.org) for comprehensive documentation, including:
-  + [Tutorial](https://quarto.org/docs/get-started/)
-  + [User guide](https://quarto.org/docs/guide/)
-  + [Options reference](https://quarto.org/docs/reference/)
-
-- [The template distributed with the Computo Quarto extension](https://computo.sfds.asso.fr/computo-quarto-extension/), which uses such advanced features.
-
-- [Our mock version of the t-SNE paper](https://computo.sfds.asso.fr/published-paper-tsne/), a full and advanced example using Python and the Jupyter kernel.
-
-- [The previously published papers in Computo](https://computo.sfds.asso.fr/publications/) can be used as references.
-
-:::
-
-# Finalize your submission
-
-## Handle `R` dependencies with `renv`
-
-To make your work reproducible, you need to fix the packages and environment used to run your analysis. For the `R` system, the `renv` package is one of the possible reliable method, supported by the community. You basically need a couple of commands to setup your environment on your local machine. First,
-
-```{r, eval = FALSE}
-renv::init()
-```
-
-will initialize your repository. Then you just need to install the dependencies required to run your contribution, for instance, 
-
-
-```{r, eval=FALSE}
-renv::install("ggplot2") # or equivalently install.packages("ggplot2")
-```
-
-Non-CRAN packages (*e.g.* Github packages) can be used. Once you are done, you can fix everything with the command
-
-```{r, eval=FALSE}
-renv::snapshot()
-```
-
-::: {.callout-important}
-The only file that needs to be versioned by git is `renv.lock`. By default, the rest is ignored thanks to `.gitignore`. 
-:::
-
-More details for using `renv` can be found either
-
-- on the [`renv` packge webpage](https://rstudio.github.io/renv/articles/renv.html), or
-- on the [quarto page dedicated to environments](https://quarto.org/docs/projects/virtual-environments.html#using-renv)
-
-## Continuous integration
-
-The repository associated with this template is pre-configure to trigger an action on push that performs the following:
-
-1. Check out repository on the `ubuntu-latest` machine
-2. Install quarto and dependencies, including the Computo extension
-3. Install R and dependencies with `renv`, using your `renv.lock` file
-4. Render your .qmd file and Publish the results on a gh-page (both HTML and PDF)
-
-The file [.github/workflows/build.yml](https://github.com/computorg/template-computo-R/blob/main/.github/workflows/build.yml) is largely inspired from [this file](https://quarto.org/docs/publishing/github-pages.html#example-knitr-with-renv).
-
-Once this is successful, you are ready to submit your manuscript to the [Computo submission platform](https://computo.scholasticahq.com/).
-
-::: {.callout-warning}
-The first time, you possibly need to create the branch for the action to work. This can be done by running the following command from your computer, in your git repository:
-
-```.bash
-quarto publish gh-pages
-```
-
-Then, set the branch `gh-page` as the source of your github page, and trigger the action to check that everything works fine.
-:::
-
-## Data and large files
-
-If your submission materials contain files larger than 50MB, **especially data files**, they won’t fit on a git repository as is. For this reason, we encourage you to put your data or any materials you deem necessary on an external “open data” centered repository hub such a [Zenodo](https://zenodo.org/) or [OSF](https://osf.io/).
 
 # References {.unnumbered}
 
