@@ -207,7 +207,7 @@ summary(estim)
 
 We end up the discussion on the Gaussian mean example by a toy experiment: we replicate $N=200$ times the simulation of $n=100$ i.i.d. random variables $\mathcal{N}(-2,1)$ and compare the maximum likelihood estimator (MLE), equal to the empirical mean, the median, and the MMD estimator with a Gaussian and with a Laplace kernel, using in both cases the median heuristic for the bandwidth parameter. We report the Mean Absolute Error over all the simulations (MAE) as well as the standard deviation of the Absolute Error (sdAE).
 ```{r r-code8, echo=TRUE}
-N = 2
+N = 200
 n = 100
 theta = -2
 err = matrix(data=0,nr=N,nc=4)
@@ -232,7 +232,7 @@ knitr::kable(final,caption="Estimation of the mean in the uncontaminated case")
 ```
 In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead.
 ```{r r-code9, echo=TRUE}
-N = 2
+N = 200
 n = 100
 theta = -2
 err = matrix(data=0,nr=N,nc=4)
@@ -260,7 +260,7 @@ The results are as expected: under no contamination, the MLE is known to be effi
  
 Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available. We repeat similar experiments as above in this model. We let $N$ and $n$ be as above and sample  the uncontaminated   observations from the $\mathcal{N}(0,1)$ distributions. We them compare the MLE to the MMD with Gaussian and Laplace kernel both in the uncontaminated case  and under Cauchy contamination for two observations. The conclusions are completely similar to the ones obtained in the Gaussian location experiments.
 ```{r r-code10, echo=TRUE}
-N = 2
+N = 200
 n = 100
 theta=1
 err = matrix(data=0,nr=N,nc=3)
@@ -283,7 +283,7 @@ final = as.table(results)
 knitr::kable(final,caption="Estimation of the standard-deviation in the uncontaminated case")
 ```
 ```{r r-code11, echo=TRUE}
-N = 2
+N = 200
 n = 100
 theta=1
 err = matrix(data=0,nr=N,nc=3)
