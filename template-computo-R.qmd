@@ -81,7 +81,9 @@ set.seed(0)
 
 The function `mmd_est` performs parametric estimation as described in @sec-para. Its required arguments are  the data `x` and the type of model `model` (see @sec-models for the list of available models). Each model implemented in the package has one or two  parameters, namely `par1` and `par2`. If the   model contains a parameter that is fixed  (i.e. not estimated from the data) then its value must be specified by the user. On the other hand, a value for a parameter   that we want to estimate from the data  does not have to be given as an input. If, however, a value is provided then it is used to initialize  the optimization algorithm that serves at computing the estimator (see below). Otherwise  an initialization by default is used.
 
-For example, there are three Gaussian univariate models: `Gaussian.loc`, `Gaussian.scale` and `Gaussian`. In each model `par1` is the mean and `par2` is the standard deviation. We will use the following data:
+Note that, on the contrary to the likelihood, the MMD criterion remains well defined even when the observations are outside the support of $P_\theta$. Thus, it is possible to fit a continuous model to discrete data, and vice versa (think for example of the approximation of a Poisson model with a large mean parameter $\lambda$ by a Gaussian distribution). However, it can also be the case that a user fits a discrete model to continuous data by mistake: we return a warning when this happens (in case this is intentional, the warning can be ignored).
+
+Let us now provide a very simple example: there are three Gaussian univariate models: `Gaussian.loc`, `Gaussian.scale` and `Gaussian`. In each model `par1` is the mean and `par2` is the standard deviation. We will use the following data:
 ```{r r-code1, echo=TRUE}
 x = rnorm(100,1.9,1)
 hist(x)
@@ -157,8 +159,7 @@ For the  estimator $\tilde{\theta}_{\mathrm{reg}}$, and as for parametric estima
 
 The computation  of $\hat{\theta}_{\mathrm{reg}}$ is more delicate. Indeed, the objective function defining this estimator is the sum of $n^2$ terms (see @sec-reg), implying that  minimizing this function using     gradient descent or SGD leads to algorithms for computing the estimator that require $\mathcal{O}(n^2)$ operations per iteration. In the package, to reduce the cost per iteration we implement the strategy proposed in Section S1 of the supplement of [@alquier2024universal]. Importantly, with this strategy the optimization is performed using an unbiased estimate of the gradient of the objective function, even when the gradient  of the $n^2$ terms of objective function can be computed explicitly. It is  however possible to use the explicit formula for these gradients   to reduce the variance of the noisy gradient, which we do   when possible. As for the computation of $\tilde{\theta}_{\mathrm{reg}}$ a stopping rule is implemented to stop the optimization earlier when possible. With this package it is feasible to compute $\hat{\theta}_{\mathrm{reg}}$ in a reasonable amount of time for dataset containing up to a few thousands data points (up-to $n\approx 5\,000$ observations, say). 
 
-
-Finally, we stress that, from a computational point of view,    MMD estimation in regression models  is a much more challenging task than in parametric models for at least two reasons. Firstly, while in the latter task the dimension of the parameter of interest $\theta$ is at most two for the models implemented in this package (see below), in regression the dimension of $\theta$ can be much larger, depending on the number of explanatory variables. Secondly, the objective functions to minimize for regression models are ''more non-linear''. When estimating a regression model it is therefore a good practice to verify that the optimization of the objective function has converged. This can be done by inspecting the sequence of $\theta$ values computed by the optimization algorithm, accessible from the  object `trace` of `mmd_reg`.
+Finally, we stress that, from a computational point of view, the minimization of the MMD criterion might be challenging. First, the criterion is not convex in general, which prevents proving the convergence of GD and SGD methods (apart from toy examples discussed in [@cherief2019finite]). These methods can also converge to local minima. Things are even more complicated in regression models where the dimension of the parameter $\theta$ can be large. In practice, we can at least assess the convergence of GD or SGD algorithm by inspecting the trajectory of the sequence of iterations. This trajectory is returned by both functions `mmd_est` and `mmd_reg` under the name `trajectory`. In case the user suspects possible local minima, we recommend to restart the optimization procedure several times with random initializations.
 
 ## Available models {#sec-models}
 
@@ -204,9 +205,13 @@ The user can also impose a different bandwidth and kernel, which will result in 
 estim =  mmd_est(x,model="Gaussian.loc",par2=1,bdwth=0.6,kernel="Laplace")
 summary(estim)
 ```
+Let us just illustrate the inspection of the trajectory of the gradient descent with the `trajectory` output:
+```{r r-code8, echo=TRUE}
+plot(estim$trajectory,type="l")
+```
 
 We end up the discussion on the Gaussian mean example by a toy experiment: we replicate $N=200$ times the simulation of $n=100$ i.i.d. random variables $\mathcal{N}(-2,1)$ and compare the maximum likelihood estimator (MLE), equal to the empirical mean, the median, and the MMD estimator with a Gaussian and with a Laplace kernel, using in both cases the median heuristic for the bandwidth parameter. We report the Mean Absolute Error over all the simulations (MAE) as well as the standard deviation of the Absolute Error (sdAE).
-```{r r-code8, echo=TRUE}
+```{r r-code9, echo=TRUE}
 N = 200
 n = 100
 theta = -2
@@ -231,7 +236,7 @@ final = as.table(results)
 knitr::kable(final,caption="Estimation of the mean in the uncontaminated case")
 ```
 In a second time, we repeat the same experiment with contamination: two of the $X_i$'s are sampled from a standard Cauchy distribution instead.
-```{r r-code9, echo=TRUE}
+```{r r-code10, echo=TRUE}
 N = 200
 n = 100
 theta = -2
@@ -259,7 +264,7 @@ knitr::kable(final,caption="Estimation of the mean in the contaminated case")
 The results are as expected: under no contamination, the MLE is known to be efficient and is therefore the best estimator. On the other hand, the MLE (i.e. the empirical mean) is known to be very sensitive to outliers. In contrast,  the    MMD estimators and the median are robust estimators of $\theta$. We refer the reader to [@briol2019statistical;@cherief2019finite] for more discussions and experiments on the robustness   MMD estimators.
  
 Note that while the median is a natural robust alternative to the MLE in the Gaussian mean model, such an alternative is not always available. Consider for example the estimation of the standard deviation of a Gaussian, with known zero mean: $\mathcal{N}(0,\theta^2)$. We cannot use (directly) a median in this case, while the MMD estimators are available. We repeat similar experiments as above in this model. We let $N$ and $n$ be as above and sample  the uncontaminated   observations from the $\mathcal{N}(0,1)$ distributions. We them compare the MLE to the MMD with Gaussian and Laplace kernel both in the uncontaminated case  and under Cauchy contamination for two observations. The conclusions are completely similar to the ones obtained in the Gaussian location experiments.
-```{r r-code10, echo=TRUE}
+```{r r-code11, echo=TRUE}
 N = 200
 n = 100
 theta=1
@@ -282,7 +287,7 @@ rownames(results) = c('MAE','sdAE')
 final = as.table(results)
 knitr::kable(final,caption="Estimation of the standard-deviation in the uncontaminated case")
 ```
-```{r r-code11, echo=TRUE}
+```{r r-code12, echo=TRUE}
 N = 200
 n = 100
 theta=1
@@ -312,12 +317,12 @@ knitr::kable(final,caption="Estimation of the standard-deviation in the contamin
 ### Dataset and model
 
 To illustrate the use of the `regMMD`  package to perform robust linear regression we use the `R` built-in dataset `airquality`. The dataset contains daily measurements of four variables related to air quality in New York, namely the ozone concentration (variable `Ozone`), the temperature (variable `Temp`), the wind speed (variable `Wind`) and the solar radiation (variable `Solar.R`). Observations are reported for the period ranging from the 1st of May 1973 to the 30th of September 1973, resulting in a total of  153 observations.  The dataset contains 42 observations with missing values, which we remove from the sample.
-```{r r-code12, echo=TRUE}
+```{r r-code13, echo=TRUE}
 air.data = na.omit(airquality)
 hist(air.data$Ozone,breaks=20)
 ```
 We report the histogram of the $\log$ of the variable `Ozone`:
-```{r r-code13, echo=TRUE}
+```{r r-code14, echo=TRUE}
 hist(log(air.data$Ozone),breaks=20)
 ```
 From this plot we observe that there is one isolated observation (i.e. outlier), for which the log of the observed value of `Ozone` is 0.
@@ -334,7 +339,7 @@ where $\epsilon\sim\mathcal{N}(0,\sigma^2)$. The noise variance $\sigma^2$ is as
 ### Data preparation
 
 We prepare the vector `y` containing the observations for the response variable as well as the design  matrix `X`:
-```{r r-code14, echo=TRUE}
+```{r r-code15, echo=TRUE}
 y = log(air.data[,1])
 X = as.matrix(air.data[,-c(1,5,6)])
 X = cbind(poly(air.data[,2], degree=2),poly(air.data[,3], degree=2),poly(air.data[,4], degree=2))
@@ -343,7 +348,7 @@ X = cbind(poly(air.data[,2], degree=2),poly(air.data[,3], degree=2),poly(air.dat
 ### OLS estimation
 
 We first estimate the model with the ordinary least squares (OLS) approach, using bot the full dataset and the one obtained by removing the outlier:
-```{r r-code15, echo=TRUE}
+```{r r-code16, echo=TRUE}
 ols.full = lm(y~X)
 ii = which(y<1)
 ols = lm(y[-ii]~X[-ii,])
@@ -355,7 +360,7 @@ As expected, the OLS estimates are sensitive to the presence of outliers in the 
 ### MMD estimation with the default settings {#sec-regdefault}
  
 Using the default settings of the `mmd_reg` function, the computationally cheap  estimator $\tilde{\theta}_{\mathrm{reg}}$ with a Gaussian kernel $k_Y(y,y')$ is used, and the model is estimated as follows:
-```{r r-code16, echo=TRUE}
+```{r r-code17, echo=TRUE}
 mmd.tilde = mmd_reg(y,X)
 summary(mmd.tilde)
 ```
@@ -363,7 +368,7 @@ summary(mmd.tilde)
 As expected from the robustness properties of MMD based estimators, we observe that the estimated values of the regression coefficients are similar to those obtained by OLS on the dataset without the outlier. The `summary` command also  returns the value of the bandwidth parameter $\gamma_Y$ obtained with the median heuristic and used to compute the estimator. 
 
 To estimate the model using the alternative estimator $\hat{\theta}_{\mathrm{reg}}$ we need to choose a non-zero value for `bdwth.x`. Using the default setting, this estimator is computed as follows:
-```{r r-code17, echo=TRUE}
+```{r r-code18, echo=TRUE}
 mmd.hat = mmd_reg(y,X,bdwth.x="auto")
 summary(mmd.hat)
 ```
@@ -373,7 +378,7 @@ We remark that the  value for `bdwth.x` selected by the default setting is very 
 ### Tuning the fit in MMD estimation
 
 Above, the estimator $\hat{\theta}_{\mathrm{reg}}$ was computed using  a Laplace kernel  for$k_X(x,x')$ and  a Gaussian kernel $k_Y(y,y')$, and using a data driven approach to select their bandwidth parameters $\gamma_X$ and $\gamma_Y$.  If, for instance, we want to use  a Cauchy kernel  for $k_X(x,x')$  with bandwidth parameter $\gamma_X=0.2$  and a Laplace kernel for $k_Y(y,y')$  with bandwidth parameter $\gamma_Y=0.5$, we can proceed as follows:
-```{r r-code18, echo=TRUE}
+```{r r-code19, echo=TRUE}
 mmd.hat = mmd_reg(y,X,bdwth.x=0.1,bdwth.y=0.5,kernel.x="Cauchy",kernel.y="Laplace")
 summary(mmd.hat)
 ```
@@ -391,7 +396,7 @@ $$
 \end{split}
 $$
 Noting that   the response variable is now `Ozone`  and not its logarithm as in  Section \ref{sub:Lin_Reg}, we modify the vector `y` accordingly:
-```{r r-code19, echo=TRUE}
+```{r r-code20, echo=TRUE}
 y = air.data[,1]
 ```
 In the histogram above we observe that there is one isolated observation (i.e.~outlier), for which the observed value of `Ozone`  is larger than $150$.
@@ -399,7 +404,7 @@ In the histogram above we observe that there is one isolated observation (i.e.~o
 ### GLM estimation
 
 We start by estimating the model with the generalized least squares (GLS) approach, using both on the full dataset and  the one obtained by removing the outlier:
-```{r r-code20, echo=TRUE}
+```{r r-code21, echo=TRUE}
 glm.full = glm(y~X,family=poisson)
 ii = which(y>150)
 glm = glm(y[-ii]~X[-ii,],family=poisson)
@@ -412,7 +417,7 @@ It is well-known that the GLM estimator is sensitive to outliers and, as a resul
 ### MMD estimation with default setting
 
 We first estimate the model parameter using the  estimator $\tilde{\theta}_{\mathrm{reg}}$. Using the default setting of \texttt{mmd\_reg} this is done as follow:
-```{r r-code21, echo=TRUE}
+```{r r-code22, echo=TRUE}
 mmd.tilde = mmd_reg(y,X,model="poisson")
 summary(mmd.tilde)
 ```
@@ -420,15 +425,19 @@ summary(mmd.tilde)
 As for the linear regression example, we observe that the estimated values of the regression coefficients are similar to those obtained by GLM on the dataset without the outlier data point.
 
 Finally, we estimate the model parameters using the estimator $\hat{\theta}_{\mathrm{reg}}$ with its default setting:
-```{r r-code22, echo=TRUE}
+```{r r-code23, echo=TRUE}
 mmd.hat = mmd_reg(y,X,model="poisson",bdwth.x="auto")
 ```
 In this case, we obtain a warning message indicating that the maximum number of iterations `maxit` allowed for the optimization algorithm has been reach. The value of `maxit`, set by default to  $50,000$, can be increased using the `control` argument of `mmd_reg`. For instance, setting `maxit=10^6` remove the warning message:
-```{r r-code23, echo=TRUE}
+```{r r-code24, echo=TRUE}
 mmd.hat = mmd_reg(y,X,model="poisson",bdwth.x="auto",control=list(maxit=10^6))
 summary(mmd.hat)
 ```
 As for the linear regression model, the value of `bdwth.x` selected by the data driven approach implemented in `mmd_reg` is close to zero and the estimate values of the model parameters are therefore similar to those above obtained with the estimator $\tilde{\theta}_{\mathrm{reg}}$.
+
+# Conclusion {#sec-conclu}
+
+Estimators obtained by minimizing the MMD criterion are very robust in theory and in practice, and we hope that this package will make them easily available to practitioners as well as to researchers willing to compare them to their own estimators. In its current state, the main limitations of `regMMD` are 1) it does not provide confidence intervals and 2) it works for a set of pre-specified models and does not allow the user to provide their own likelihood function. Existing formulas for confidence intervals require intensive computations to be evaluated, while the stability of gradient-based algorithms is more difficult to ensure for a user-defined likelihood. We hope to be able to include such features in future versions of `regMMD`.
 
 # References {.unnumbered}
 
