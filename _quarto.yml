@@ -1,5 +1,8 @@
-project:
-  title: "regMMD-paper"
+project:  
+  type: default
+  render:
+    - published-202511-alquier-regmmd.qmd
+    - README.qmd
 
 title: "`regMMD`: an `R` package for parametric estimation and regression with maximum mean discrepancy"
 subtitle: "The `R` package `regMMD`"
@@ -21,7 +24,7 @@ author:
       - name: University of Bristol
         department: School of Mathematics
         url: https://research-information.bris.ac.uk/en/organisations/school-of-mathematics
-date: last-modified
+date: 11-17-2025
 date-modified: last-modified
 description:
   This document provides a complete introduction to the template based on the `regMMD` package for `R`, that implements minimum distance estimation in various parametric and regression models using the maximum mean discrepancy (MMD) metric.
@@ -31,15 +34,15 @@ keywords: [parameter estimation, regression, robust statistics, minimum distance
 citation:
   type: article-journal
   container-title: "Computo"
-  doi: "xxxx"
-  url: https://computo.sfds.asso.fr/template-computo-quarto
-  publisher: "Société Française de Statistique"
+  doi: "10.57750/d6d1-gb09"
+  publisher: "French Statistical Society"
   issn: "2824-7795"
 bibliography: references.bib
 github-user: computorg
-repo: "template-computo-r"
-draft: true # set to false once the build is running
-published: false # will be set to true once accepted
+repo: "published-202511-alquier-regmmd"
+google-scholar: true
+draft: true
+published: false
 format:
   computo-html: default
   computo-pdf: default
