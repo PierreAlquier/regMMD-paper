@@ -9,6 +9,7 @@ mean discrepancy (MMD) metric.*
 [![DOI:10.57750/d6d1-gb09](https://img.shields.io/badge/DOI-10.57750/d6d1--gb09-034E79.svg)](https://doi.org/10.57750/d6d1-gb09)
 [![Creative Commons License](https://i.creativecommons.org/l/by/4.0/80x15.png)](http://creativecommons.org/licenses/by/4.0/)
 [![reviews](https://img.shields.io/badge/review-report-blue.png)](https://github.com/computorg/published-202511-alquier-regmmd/issues?q=is%3Aopen+is%3Aissue+label%3Areview)
+[![SWH](https://archive.softwareheritage.org/badge/origin/https://github.com/computorg/published-202511-alquier-regmmd/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/computorg/published-202511-alquier-regmmd)
 
 ### Authors
 

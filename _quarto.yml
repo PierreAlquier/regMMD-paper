@@ -24,7 +24,7 @@ author:
       - name: University of Bristol
         department: School of Mathematics
         url: https://research-information.bris.ac.uk/en/organisations/school-of-mathematics
-date: 11-17-2025
+date: 11-18-2025
 date-modified: last-modified
 description:
   This document provides a complete introduction to the template based on the `regMMD` package for `R`, that implements minimum distance estimation in various parametric and regression models using the maximum mean discrepancy (MMD) metric.
@@ -41,8 +41,8 @@ bibliography: references.bib
 github-user: computorg
 repo: "published-202511-alquier-regmmd"
 google-scholar: true
-draft: true
-published: false
+draft: false
+published: true
 format:
   computo-html: default
   computo-pdf: default
